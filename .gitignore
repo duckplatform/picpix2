@@ -1,3 +1,8 @@
+node_modules/
+.env
+logs/
+coverage/
+
 .architect
 bootstrap.css
 bootstrap.js
