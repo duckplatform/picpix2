@@ -1,0 +1,59 @@
+<%- include('../partials/header', { pageTitle }) %>
+<%- include('../partials/alerts') %>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Mon profil</h1>
+        <form action="/profile" method="post" class="vstack gap-3">
+          <div>
+            <label class="form-label" for="username">Nom d'utilisateur</label>
+            <input class="form-control" type="text" id="username" name="username" value="<%= user.username %>" required>
+          </div>
+          <div>
+            <label class="form-label" for="fullName">Nom complet</label>
+            <input class="form-control" type="text" id="fullName" name="fullName" value="<%= user.fullName %>" required>
+          </div>
+          <div>
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" value="<%= user.email %>" required>
+          </div>
+          <button class="btn btn-primary" type="submit">Enregistrer le profil</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h2 class="h5">Informations</h2>
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item px-0">Rôle: <strong><%= user.role %></strong></li>
+          <li class="list-group-item px-0">Actif: <strong><%= user.isActive ? 'oui' : 'non' %></strong></li>
+          <li class="list-group-item px-0">Créé le: <strong><%= new Date(user.createdAt).toLocaleString('fr-FR') %></strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-3">Changer le mot de passe</h2>
+        <form action="/profile/password" method="post" class="vstack gap-3">
+          <div>
+            <label class="form-label" for="currentPassword">Mot de passe actuel</label>
+            <input class="form-control" type="password" id="currentPassword" name="currentPassword" required>
+          </div>
+          <div>
+            <label class="form-label" for="newPassword">Nouveau mot de passe</label>
+            <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" required>
+          </div>
+          <button class="btn btn-outline-dark" type="submit">Mettre à jour le mot de passe</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

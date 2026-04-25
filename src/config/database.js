@@ -4,7 +4,11 @@ const env = require("./env");
 const isTest = env.nodeEnv === "test";
 
 const sequelize = isTest
-  ? new Sequelize("sqlite::memory:", { logging: false })
+  ? new Sequelize({
+      dialect: "sqlite",
+      storage: ":memory:",
+      logging: false,
+    })
   : new Sequelize(env.db.name, env.db.user, env.db.password, {
       host: env.db.host,
       port: env.db.port,

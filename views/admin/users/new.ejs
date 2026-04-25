@@ -1,0 +1,40 @@
+<%- include('../../partials/header', { pageTitle }) %>
+<%- include('../../partials/alerts') %>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Créer un utilisateur</h1>
+        <form method="post" action="/admin/users" class="vstack gap-3">
+          <div>
+            <label class="form-label" for="username">Username</label>
+            <input class="form-control" type="text" id="username" name="username" required>
+          </div>
+          <div>
+            <label class="form-label" for="fullName">Nom complet</label>
+            <input class="form-control" type="text" id="fullName" name="fullName" required>
+          </div>
+          <div>
+            <label class="form-label" for="email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" required>
+          </div>
+          <div>
+            <label class="form-label" for="password">Mot de passe</label>
+            <input class="form-control" type="password" id="password" name="password" minlength="8" required>
+          </div>
+          <div>
+            <label class="form-label" for="role">Rôle</label>
+            <select class="form-select" id="role" name="role" required>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="submit">Créer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/footer') %>

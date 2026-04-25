@@ -1,0 +1,23 @@
+:root {
+  --hero-start: #0f172a;
+  --hero-end: #2563eb;
+}
+
+body {
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  min-height: 100vh;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--hero-start), var(--hero-end));
+  box-shadow: 0 1rem 2rem rgba(15, 23, 42, 0.15);
+}
+
+.card {
+  border: 0;
+  border-radius: 1rem;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.9rem 0.75rem;
+}

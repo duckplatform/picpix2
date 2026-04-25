@@ -1,0 +1,26 @@
+{
+  "name": "picpix2-codespace",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/picpix2",
+  "forwardPorts": [3000, 3306],
+  "portsAttributes": {
+    "3000": {
+      "label": "picpix2-web",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "mysql"
+    }
+  },
+  "postCreateCommand": "npm install && bash .devcontainer/setup-codespace.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
