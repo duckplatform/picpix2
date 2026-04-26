@@ -12,6 +12,7 @@ const { marked } = require('marked');
 const { body, param, validationResult } = require('express-validator');
 
 const logger = require('../config/logger');
+const eventTransitions = require('../config/eventTransitions');
 const eventThemes = require('../config/eventThemes');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const eventFileStore = require('../services/eventFileStore');
@@ -23,6 +24,7 @@ const router = express.Router();
 const MAX_EVENT_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const EVENT_UPLOAD_SOURCE_MODES = ['default', 'camera_only', 'library_only'];
 const EVENT_THEME_KEYS = Object.keys(eventThemes.EVENT_THEMES);
+const EVENT_TRANSITION_KEYS = Object.keys(eventTransitions.EVENT_TRANSITIONS);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -80,6 +82,7 @@ function renderView(res, view, payload = {}, status = 200) {
     headCssPaths: [],
     footerScriptPaths: [],
     eventThemeOptions: eventThemes.listThemes(),
+    eventTransitionOptions: eventTransitions.listTransitions(),
     ...payload,
   });
 }
@@ -161,6 +164,9 @@ function normalizeEventFormData(formData = {}, fallback = {}) {
   return {
     ...formData,
     theme: eventThemes.normalizeThemeKey(formData.theme || fallback.theme),
+    slideshowTransition: eventTransitions.normalizeTransitionKey(
+      formData.slideshowTransition || fallback.slideshowTransition,
+    ),
     uploadSourceMode,
     uploadAllowMultiple,
   };
@@ -327,6 +333,10 @@ const eventValidators = [
     .optional({ values: 'falsy' })
     .trim()
     .isIn(EVENT_THEME_KEYS).withMessage('Theme evenement invalide.'),
+  body('slideshowTransition')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isIn(EVENT_TRANSITION_KEYS).withMessage('Transition slideshow invalide.'),
   body('uploadSourceMode')
     .optional({ values: 'falsy' })
     .trim()
@@ -381,6 +391,7 @@ async function renderProfile(req, res, payload = {}, status = 200) {
       fullName: req.currentUser.fullName,
       eventStatus: 'inactive',
       theme: eventThemes.DEFAULT_EVENT_THEME,
+      slideshowTransition: eventTransitions.DEFAULT_EVENT_TRANSITION,
       uploadSourceMode: 'default',
       uploadAllowMultiple: true,
       ...payload.formData,
@@ -407,6 +418,7 @@ function renderProfileEventForm(req, res, eventItem, payload = {}, status = 200)
       startsAt: toDateTimeLocal(eventItem.startsAt),
       status: eventItem.status,
       theme: eventItem.theme || eventThemes.DEFAULT_EVENT_THEME,
+      slideshowTransition: eventItem.slideshowTransition || eventTransitions.DEFAULT_EVENT_TRANSITION,
       uploadSourceMode: eventItem.uploadSourceMode,
       uploadAllowMultiple: eventItem.uploadAllowMultiple,
       ...payload.formData,
@@ -941,6 +953,7 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
       startsAt: req.body.startsAt,
       status: req.body.status,
       theme: eventThemes.normalizeThemeKey(req.body.theme),
+      slideshowTransition: eventTransitions.normalizeTransitionKey(req.body.slideshowTransition),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1040,6 +1053,7 @@ router.get('/profile/events/:id/slideshow', requireAuth, param('id').isInt({ min
       pageClass: 'page-profile',
       editingEvent,
       eventTheme: eventThemes.getTheme(editingEvent.theme),
+      slideshowTransition: eventTransitions.normalizeTransitionKey(editingEvent.slideshowTransition),
       initialPhotos,
       footerScriptPaths: ['/socket.io/socket.io.js', '/profile-event-slideshow.js'],
     });
@@ -1123,6 +1137,7 @@ router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), ev
       startsAt: req.body.startsAt,
       status: req.body.status,
       theme: eventThemes.normalizeThemeKey(req.body.theme),
+      slideshowTransition: eventTransitions.normalizeTransitionKey(req.body.slideshowTransition),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1236,6 +1251,7 @@ router.get('/admin/events/new', requireAdmin, async (req, res, next) => {
       formData: {
         status: 'inactive',
         theme: eventThemes.DEFAULT_EVENT_THEME,
+        slideshowTransition: eventTransitions.DEFAULT_EVENT_TRANSITION,
         uploadSourceMode: 'default',
         uploadAllowMultiple: true,
       },
@@ -1273,6 +1289,7 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
       startsAt: req.body.startsAt,
       status: req.body.status,
       theme: eventThemes.normalizeThemeKey(req.body.theme),
+      slideshowTransition: eventTransitions.normalizeTransitionKey(req.body.slideshowTransition),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1353,6 +1370,7 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
       startsAt: req.body.startsAt,
       status: req.body.status,
       theme: eventThemes.normalizeThemeKey(req.body.theme),
+      slideshowTransition: eventTransitions.normalizeTransitionKey(req.body.slideshowTransition),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });

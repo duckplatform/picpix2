@@ -1082,8 +1082,34 @@ textarea:focus {
   object-fit: contain;
   display: block;
   opacity: 1;
-  transition: opacity 0.7s ease;
+  transform: none;
+  transition: opacity 0.82s ease, transform 0.82s ease;
   filter: drop-shadow(0 16px 34px rgba(0, 0, 0, 0.42));
+}
+
+.slideshow-out-fade,
+.slideshow-in-fade-start {
+  opacity: 0;
+}
+
+.slideshow-out-slide {
+  opacity: 0;
+  transform: translateX(-7%);
+}
+
+.slideshow-in-slide-start {
+  opacity: 0;
+  transform: translateX(7%);
+}
+
+.slideshow-out-zoom {
+  opacity: 0;
+  transform: scale(1.08);
+}
+
+.slideshow-in-zoom-start {
+  opacity: 0;
+  transform: scale(0.92);
 }
 
 .slideshow-caption {

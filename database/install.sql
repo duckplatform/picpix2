@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS events (
 	starts_at DATETIME NOT NULL,
 	status ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
 	theme VARCHAR(40) NOT NULL DEFAULT 'classic',
+	slideshow_transition VARCHAR(30) NOT NULL DEFAULT 'fade',
 	upload_source_mode ENUM('default', 'camera_only', 'library_only') NOT NULL DEFAULT 'default',
 	upload_allow_multiple TINYINT(1) NOT NULL DEFAULT 1,
 	token CHAR(10) NOT NULL,

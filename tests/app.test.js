@@ -460,6 +460,7 @@ describe('Tests applicatifs HTTP', () => {
           description: 'Festival culturel et musical du printemps.',
           startsAt: '2026-05-01T19:30',
           status: 'active',
+          slideshowTransition: 'zoom',
           uploadSourceMode: 'library_only',
         });
 
@@ -477,6 +478,7 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].token).to.match(/^[A-Za-z0-9]{10}$/);
       expect(events[0].status).to.equal('active');
       expect(events[0].description).to.equal('Festival culturel et musical du printemps.');
+      expect(events[0].slideshowTransition).to.equal('zoom');
       expect(events[0].uploadSourceMode).to.equal('library_only');
       expect(events[0].uploadAllowMultiple).to.equal(false);
 
@@ -491,6 +493,7 @@ describe('Tests applicatifs HTTP', () => {
       expect(ownerSlideshow.status).to.equal(200);
       expect(ownerSlideshow.text).to.include('slideshow-shell');
       expect(ownerSlideshow.text).to.include('event-theme-classic');
+      expect(ownerSlideshow.text).to.include('data-transition="zoom"');
     });
 
     it('applique le theme configure sur la page slideshow proprietaire', async () => {

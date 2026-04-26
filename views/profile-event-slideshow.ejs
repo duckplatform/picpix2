@@ -12,6 +12,7 @@
       id="slideshow-shell"
       data-event-id="<%= editingEvent.id %>"
       data-event-name="<%- editingEvent.name %>"
+      data-transition="<%= slideshowTransition || 'fade' %>"
       data-initial-photos='<%- JSON.stringify(initialPhotos || []) %>'>
 
       <header class="slideshow-event-banner" aria-label="Nom de l'evenement">

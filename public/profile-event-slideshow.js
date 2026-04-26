@@ -16,6 +16,8 @@
     return;
   }
 
+  const transitionMode = (shell.dataset.transition || 'fade').toLowerCase();
+
   let initialPhotos = [];
   try {
     initialPhotos = JSON.parse(shell.dataset.initialPhotos || '[]');
@@ -89,8 +91,31 @@
     }
   }
 
-  // Durée en ms, doit correspondre à la transition CSS opacity du slideshow-image.
-  const FADE_DURATION_MS = 700;
+  const TRANSITION_PRESETS = {
+    fade: { duration: 700, outClass: 'slideshow-out-fade', inStartClass: 'slideshow-in-fade-start' },
+    slide: { duration: 780, outClass: 'slideshow-out-slide', inStartClass: 'slideshow-in-slide-start' },
+    zoom: { duration: 820, outClass: 'slideshow-out-zoom', inStartClass: 'slideshow-in-zoom-start' },
+    cut: { duration: 0, outClass: '', inStartClass: '' },
+  };
+
+  const transitionPreset = TRANSITION_PRESETS[transitionMode] || TRANSITION_PRESETS.fade;
+
+  function clearTransitionClasses() {
+    imageEl.classList.remove(
+      'slideshow-out-fade',
+      'slideshow-out-slide',
+      'slideshow-out-zoom',
+      'slideshow-in-fade-start',
+      'slideshow-in-slide-start',
+      'slideshow-in-zoom-start',
+    );
+  }
+
+  // Evite que des styles inline (opacity/transform) bloquent les classes CSS de transition.
+  function clearInlineTransitionStyles() {
+    imageEl.style.opacity = '';
+    imageEl.style.transform = '';
+  }
 
   /** Précharge une image, tente le fallback en cas d'erreur, appelle cb(srcUtilisé). */
   function preloadImage(url, fallbackUrl, cb) {
@@ -105,18 +130,32 @@
     img.src = url;
   }
 
-  /** Applique la source et la légende puis fait le fondu entrant. */
+  /** Applique la source/légende et déclenche la transition entrante selon le mode. */
   function fadeIn(photo, src) {
+    clearTransitionClasses();
+    clearInlineTransitionStyles();
+
+    if (transitionPreset.inStartClass) {
+      imageEl.classList.add(transitionPreset.inStartClass);
+    }
+
     imageEl.src = src;
     imageEl.alt = photo.originalName || 'Photo evenement';
     imageEl.onerror = null;
     if (captionEl) {
       captionEl.textContent = buildCaption(photo);
     }
-    // Double rAF : s'assure que le navigateur a peint opacity:0 avant de déclencher la transition.
+
+    if (transitionPreset.duration === 0) {
+      clearTransitionClasses();
+      clearInlineTransitionStyles();
+      return;
+    }
+
+    // Double rAF : s'assure que l'état de départ est peint avant la transition entrante.
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        imageEl.style.opacity = '1';
+        clearTransitionClasses();
       });
     });
   }
@@ -125,7 +164,7 @@
    * Crossfade vers la nouvelle photo.
    * - Si la figure était cachée (display:none) → le navigateur ignore les transitions au
    *   moment du changement display. On laisse un rAF s'écouler avant de charger l'image.
-   * - Si une photo était déjà affichée → on attend la fin du fondu-sortant (FADE_DURATION_MS)
+  * - Si une photo était déjà affichée → on attend la fin de la transition sortante
    *   avant de swapper la source, garantissant qu'il n'y a jamais de saut visuel.
    */
   function setDisplayState(photo) {
@@ -139,23 +178,37 @@
       figureEl.hidden = false;
     }
 
+    clearTransitionClasses();
+    clearInlineTransitionStyles();
+
+    if (transitionPreset.duration === 0) {
+      preloadImage(photo.url, photo.fallbackUrl, function (src) {
+        fadeIn(photo, src);
+      });
+      return;
+    }
+
     if (wasHidden) {
       // La figure vient d'être rendue visible : imposer opacity:0 dans ce même frame
-      // puis laisser le navigateur peindre avant de charger l'image et faire le fade-in.
-      imageEl.style.opacity = '0';
+      // puis laisser le navigateur peindre avant de charger l'image et faire l'entrée.
+      if (transitionPreset.inStartClass) {
+        imageEl.classList.add(transitionPreset.inStartClass);
+      }
       requestAnimationFrame(function () {
         preloadImage(photo.url, photo.fallbackUrl, function (src) {
           fadeIn(photo, src);
         });
       });
     } else {
-      // Une photo était déjà visible : fondu-sortant d'abord, swap après la transition.
-      imageEl.style.opacity = '0';
+      // Une photo était déjà visible : transition sortante d'abord, swap ensuite.
+      if (transitionPreset.outClass) {
+        imageEl.classList.add(transitionPreset.outClass);
+      }
       setTimeout(function () {
         preloadImage(photo.url, photo.fallbackUrl, function (src) {
           fadeIn(photo, src);
         });
-      }, FADE_DURATION_MS);
+      }, transitionPreset.duration);
     }
   }
 
