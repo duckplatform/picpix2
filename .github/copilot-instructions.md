@@ -4,6 +4,7 @@ Prendre systematiquement en compte l'existant et l'adapter à la demande.
 Controleras que tu a appliqué tous les points à pour chaque demande.
 
 # Techniques
+
 Type d'application: Web application (site web publique)
 Stack : Node.js + Express + MySQL.
 Application pensée pour être déployée sur un VPS simple (Type cPanel).
@@ -29,3 +30,9 @@ Execute les tests complets avant livraison
 Fournis une documentation complete concernant: l'architecture, l'installation et la mise à jour.
 Fournis séparement une documentation d'utilisation.
 Si nécessaire, inclu des pages d'aide publique sur l'application.
+
+
+# Github Codespace
+
+Maintient un environnement codespace complet et fonctionnel pour le projet, avec tous les outils nécessaires préinstallés.
+Assure que les instructions d'installation et de configuration sont à jour et fonctionnelles dans l'environnement codespace.

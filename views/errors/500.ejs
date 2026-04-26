@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title || 'Erreur serveur' %> - PicPix2</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="<%= pageClass || '' %>">
+    <main class="container">
+      <section class="hero">
+        <h1><%= statusCode || 500 %></h1>
+        <p><%= message || 'Une erreur est survenue.' %></p>
+        <a class="btn" href="/">Retour a l'accueil</a>
+      </section>
+    </main>
+  </body>
+</html>

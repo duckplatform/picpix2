@@ -144,6 +144,11 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Permet d'afficher une page d'accueil simple même si MySQL n'est pas disponible.
+  if (req.method === 'GET' && req.path === '/') {
+    return next();
+  }
+
   return res.status(503).render('errors/500', {
     title:      'Service temporairement indisponible',
     pageClass:  'page-error',
@@ -153,6 +158,8 @@ app.use((req, res, next) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────
+
+app.use('/', require('./routes/index'));
 
 
 
