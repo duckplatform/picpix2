@@ -95,8 +95,17 @@
       <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
     </label>
 
+    <label>
+      <span class="checkbox-label">
+        <input type="checkbox" name="moderationEnabled" value="1" <%= formData.moderationEnabled ? 'checked' : '' %> />
+        Activer la moderation avant affichage sur le slideshow
+      </span>
+      <% if (fieldErrors.moderationEnabled) { %><small class="field-error"><%= fieldErrors.moderationEnabled %></small><% } %>
+    </label>
+
     <div class="table-actions">
       <button class="btn" type="submit">Enregistrer les modifications</button>
+      <a class="btn btn-secondary" href="/profile/event/<%= editingEvent.id %>/moderation">Moderation</a>
       <a class="btn btn-secondary" href="/profile">Retour au profil</a>
     </div>
   </form>

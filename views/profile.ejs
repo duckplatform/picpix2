@@ -131,6 +131,14 @@
         <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
       </label>
 
+      <label>
+        <span class="checkbox-label">
+          <input type="checkbox" name="moderationEnabled" value="1" <%= formData.moderationEnabled ? 'checked' : '' %> />
+          Activer la moderation avant affichage sur le slideshow
+        </span>
+        <% if (fieldErrors.moderationEnabled) { %><small class="field-error"><%= fieldErrors.moderationEnabled %></small><% } %>
+      </label>
+
       <button class="btn" type="submit">Creer l'evenement</button>
     </form>
   </article>
@@ -160,7 +168,9 @@
                 <td>
                   <div class="table-actions">
                     <a class="btn btn-small" href="/event/<%= eventItem.token %>" target="_blank" rel="noopener noreferrer">Site</a>
-                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/slideshow">Galerie</a>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/slideshow">Slideshow</a>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/gallery">Galerie</a>
+                    <a class="btn btn-secondary btn-small" href="/profile/event/<%= eventItem.id %>/moderation">Moderation</a>
                     <% if (eventItem.status !== 'active') { %>
                       <form method="post" action="/profile/events/<%= eventItem.id %>/activate" class="inline-form">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
