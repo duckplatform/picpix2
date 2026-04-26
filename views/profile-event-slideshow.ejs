@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= editingEvent.name %> - Slideshow</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="slideshow-fullscreen-body">
+
+    <div class="slideshow-shell"
+      id="slideshow-shell"
+      data-event-id="<%= editingEvent.id %>"
+      data-event-name="<%- editingEvent.name %>"
+      data-initial-photos='<%- JSON.stringify(initialPhotos || []) %>'>
+
+      <header class="slideshow-event-banner" aria-label="Nom de l'evenement">
+        <span class="slideshow-event-pill">Evenement</span>
+        <h1 class="slideshow-event-name"><%= editingEvent.name %></h1>
+      </header>
+
+      <div class="slideshow-vignette" aria-hidden="true"></div>
+
+      <div id="slideshow-waiting" class="slideshow-waiting">
+        Aucune photo pour le moment. En attente de nouveaux envois…
+      </div>
+
+      <figure id="slideshow-figure" class="slideshow-figure" hidden>
+        <img id="slideshow-image" class="slideshow-image" alt="Photo de l'evenement" />
+        <figcaption id="slideshow-caption" class="slideshow-caption"></figcaption>
+      </figure>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/profile-event-slideshow.js"></script>
+  </body>
+</html>

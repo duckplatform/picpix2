@@ -136,7 +136,7 @@
                 <td>
                   <div class="table-actions">
                     <a class="btn btn-small" href="/event/<%= eventItem.token %>" target="_blank" rel="noopener noreferrer">Site</a>
-                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/gallery">Galerie</a>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/slideshow">Galerie</a>
                     <% if (eventItem.status !== 'active') { %>
                       <form method="post" action="/profile/events/<%= eventItem.id %>/activate" class="inline-form">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

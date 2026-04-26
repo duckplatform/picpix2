@@ -269,6 +269,15 @@ function listenAsync() {
       socket.on('ranking:join-all', () => {
         socket.join('ranking:all');
       });
+
+      socket.on('slideshow:join', (payload = {}) => {
+        const eventId = Number.parseInt(payload.eventId, 10);
+        if (!Number.isInteger(eventId) || eventId <= 0) {
+          return;
+        }
+
+        socket.join(`event:${eventId}:slideshow`);
+      });
     });
 
     server.listen(PORT, () => {

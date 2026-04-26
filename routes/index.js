@@ -657,6 +657,7 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
           const record = await eventFileStore.createFileRecord({
             eventId: eventItem.id,
             uploadedByUserId: req.currentUser ? req.currentUser.id : null,
+            uploaderName: guestName,
             originalName: file.originalname,
             storedName: file.filename,
             sizeBytes: file.size,
@@ -669,6 +670,20 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
         }
 
         logger.info(`[EVENT] Upload visiteur ${guestName} sur evenement ${eventItem.uuid}: ${createdFiles.length} fichier(s)`);
+
+        const io = req.app && req.app.locals ? req.app.locals.io : null;
+        if (io) {
+          createdFiles.forEach((fileItem) => {
+            io.to(`event:${eventItem.id}:slideshow`).emit('slideshow:new-photo', {
+              eventId: eventItem.id,
+              storedName: fileItem.storedName,
+              originalName: fileItem.originalName,
+              uploaderName: fileItem.uploaderName,
+              uploadedAt: fileItem.createdAt,
+            });
+          });
+        }
+
         return res.status(201).json({
           message: `${createdFiles.length} fichier(s) televerse(s) avec succes.`,
           files: createdFiles,
@@ -977,6 +992,39 @@ router.get('/profile/events/:id/gallery', requireAuth, param('id').isInt({ min: 
       pageClass: 'page-profile',
       editingEvent,
       galleryFiles,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/profile/events/:id/slideshow', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    const uploadedFiles = await eventFileStore.listByEvent(editingEvent.id);
+    const initialPhotos = uploadedFiles.map((fileItem) => ({
+      storedName: fileItem.storedName,
+      originalName: fileItem.originalName,
+      uploaderName: fileItem.uploaderName,
+      uploadedAt: fileItem.createdAt,
+    }));
+
+    return renderView(res, 'profile-event-slideshow', {
+      title: `Slideshow - ${editingEvent.name}`,
+      pageClass: 'page-profile',
+      editingEvent,
+      initialPhotos,
+      footerScriptPaths: ['/socket.io/socket.io.js', '/profile-event-slideshow.js'],
     });
   } catch (err) {
     return next(err);

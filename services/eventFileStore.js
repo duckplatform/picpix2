@@ -18,6 +18,7 @@ function normalizeRow(row) {
     id: row.id,
     eventId: row.eventId || row.event_id,
     uploadedByUserId: row.uploadedByUserId || row.uploaded_by_user_id || null,
+    uploaderName: row.uploaderName || row.uploader_name || null,
     originalName: row.originalName || row.original_name,
     storedName: row.storedName || row.stored_name,
     sizeBytes: row.sizeBytes || row.size_bytes,
@@ -31,6 +32,7 @@ async function createFileRecord(payload) {
   const record = {
     eventId: Number(payload.eventId),
     uploadedByUserId: payload.uploadedByUserId ? Number(payload.uploadedByUserId) : null,
+    uploaderName: payload.uploaderName || null,
     originalName: payload.originalName,
     storedName: payload.storedName,
     sizeBytes: Number(payload.sizeBytes),
@@ -52,13 +54,14 @@ async function createFileRecord(payload) {
 
   const [result] = await pool.query(`
     INSERT INTO event_files (
-      event_id, uploaded_by_user_id, original_name, stored_name,
+      event_id, uploaded_by_user_id, uploader_name, original_name, stored_name,
       size_bytes, storage_path, checksum_sha256
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     record.eventId,
     record.uploadedByUserId,
+    record.uploaderName,
     record.originalName,
     record.storedName,
     record.sizeBytes,
@@ -68,6 +71,7 @@ async function createFileRecord(payload) {
 
   const [rows] = await pool.query(`
     SELECT id, event_id AS eventId, uploaded_by_user_id AS uploadedByUserId,
+           uploader_name AS uploaderName,
            original_name AS originalName, stored_name AS storedName,
            size_bytes AS sizeBytes, storage_path AS storagePath,
            checksum_sha256 AS checksumSha256, created_at AS createdAt
@@ -89,6 +93,7 @@ async function listByEvent(eventId) {
 
   const [rows] = await pool.query(`
     SELECT id, event_id AS eventId, uploaded_by_user_id AS uploadedByUserId,
+           uploader_name AS uploaderName,
            original_name AS originalName, stored_name AS storedName,
            size_bytes AS sizeBytes, storage_path AS storagePath,
            checksum_sha256 AS checksumSha256, created_at AS createdAt

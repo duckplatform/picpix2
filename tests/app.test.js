@@ -466,6 +466,10 @@ describe('Tests applicatifs HTTP', () => {
       const ownerGallery = await agent.get(`/profile/events/${events[0].id}/gallery`);
       expect(ownerGallery.status).to.equal(200);
       expect(ownerGallery.text).to.include('Galerie proprietaire');
+
+      const ownerSlideshow = await agent.get(`/profile/events/${events[0].id}/slideshow`);
+      expect(ownerSlideshow.status).to.equal(200);
+      expect(ownerSlideshow.text).to.include('slideshow-shell');
     });
 
     it('sanitise la description markdown lors de la creation d\'evenement', async () => {
