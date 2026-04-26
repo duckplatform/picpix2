@@ -1,26 +1,58 @@
 {
-  "name": "picpix2-codespace",
+  // ─── Configuration GitHub Codespace ─────────────────────
+  // Ce fichier définit l'environnement de développement Codespace :
+  //   - Conteneur Node.js 20 + MySQL 8.0 via Docker Compose
+  //   - Installation automatique des dépendances et du schéma DB
+  //   - Port 3000 exposé en "public" (accès direct sans action manuelle)
+  //   - Démarrage automatique de l'application à chaque ouverture du Codespace
+
+  "name": "LANPartyManager — Codespace",
+
+  // ─── Services Docker Compose ───────────────────────────────────────────────
+  // L'image app est définie dans .devcontainer/Dockerfile (Node.js 20 + mysql-client)
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces/picpix2",
+  "workspaceFolder": "/workspace",
+
+  // ─── Initialisation (exécuté UNE seule fois à la création) ────────────────
+  // 1. Installe les dépendances npm (dev inclus pour nodemon/mocha)
+  // 2. Initialise le schéma MySQL et insère le compte admin par défaut
+  "postCreateCommand": "npm install && bash .devcontainer/init-db.sh",
+
+  // ─── Démarrage automatique (exécuté à CHAQUE ouverture du Codespace) ──────
+  // Lance l'application en arrière-plan ; les logs sont disponibles dans
+  // /tmp/app.log — redémarre silencieusement si déjà lancé.
+  "postStartCommand": "bash .devcontainer/start-app.sh",
+
+  // ─── Ports ────────────────────────────────────────────────────────────────
   "forwardPorts": [3000, 3306],
   "portsAttributes": {
     "3000": {
-      "label": "picpix2-web",
-      "onAutoForward": "notify"
+      "label": "Application",
+      "visibility": "public"
     },
     "3306": {
-      "label": "mysql"
+      "label": "MySQL",
+      "visibility": "private"
     }
   },
-  "postCreateCommand": "npm install && bash .devcontainer/setup-codespace.sh",
+
+  // ─── Personnalisation VS Code ──────────────────────────────────────────────
   "customizations": {
     "vscode": {
       "extensions": [
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "ms-azuretools.vscode-docker"
-      ]
+        "cweijan.vscode-mysql-client2",
+        "digitalbrainstem.javascript-ejs-support",
+        "Tyriar.log-data-highlighter",
+        "ms-azuretools.vscode-containers",
+        "GitHub.copilot-chat"
+      ],
+      "settings": {
+        "editor.tabSize": 2,
+        "editor.formatOnSave": false,
+        "files.eol": "\n"
+      }
     }
   }
 }

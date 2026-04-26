@@ -1,25 +1,27 @@
-<%- include('../partials/header', { pageTitle }) %>
-<%- include('../partials/alerts') %>
-
-<div class="row justify-content-center">
-  <div class="col-md-6 col-lg-5">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h4 mb-3">Connexion</h1>
-        <form action="/login" method="post" class="vstack gap-3">
-          <div>
-            <label class="form-label" for="email">Email</label>
-            <input class="form-control" type="email" id="email" name="email" required>
-          </div>
-          <div>
-            <label class="form-label" for="password">Mot de passe</label>
-            <input class="form-control" type="password" id="password" name="password" required>
-          </div>
-          <button class="btn btn-primary" type="submit">Se connecter</button>
-        </form>
-      </div>
-    </div>
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Authentification</p>
+    <h1>Connexion</h1>
+    <p>Connectez-vous avec votre compte utilisateur ou administrateur.</p>
   </div>
-</div>
+  <form method="post" action="/login" class="form-grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
 
+    <label>
+      <span>Email</span>
+      <input type="email" name="email" value="<%= formData.email || '' %>" required maxlength="190" />
+      <% if (fieldErrors.email) { %><small class="field-error"><%= fieldErrors.email %></small><% } %>
+    </label>
+
+    <label>
+      <span>Mot de passe</span>
+      <input type="password" name="password" required maxlength="72" />
+      <% if (fieldErrors.password) { %><small class="field-error"><%= fieldErrors.password %></small><% } %>
+    </label>
+
+    <button class="btn" type="submit">Se connecter</button>
+  </form>
+</section>
 <%- include('../partials/footer') %>

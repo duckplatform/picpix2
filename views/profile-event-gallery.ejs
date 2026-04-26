@@ -1,0 +1,41 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Mon evenement</p>
+    <h1>Galerie proprietaire</h1>
+    <p>Visualisation des photos de l'evenement <strong><%= editingEvent.name %></strong>.</p>
+  </div>
+
+  <div class="table-actions">
+    <a class="btn btn-secondary" href="/profile/events/<%= editingEvent.id %>/edit">Retour a l'edition</a>
+    <a class="btn" href="/event/<%= editingEvent.token %>/gallery" target="_blank" rel="noopener noreferrer">Voir la galerie publique</a>
+  </div>
+
+  <% if (!galleryFiles.length) { %>
+    <p class="section-gap">Aucune photo disponible pour le moment.</p>
+  <% } else { %>
+    <div class="event-gallery-grid section-gap">
+      <% galleryFiles.forEach((fileItem) => { %>
+        <article class="event-gallery-card">
+          <a href="<%= fileItem.urls.xl || fileItem.urls.original %>" target="_blank" rel="noopener noreferrer">
+            <img
+              src="<%= fileItem.urls.sm || fileItem.urls.md || fileItem.urls.original %>"
+              alt="<%= fileItem.originalName %>"
+              loading="lazy"
+            />
+          </a>
+          <div class="event-gallery-meta">
+            <strong><%= fileItem.originalName %></strong>
+            <small>
+              <%= fileItem.isProcessed ? 'Version optimisee disponible' : 'Optimisation en cours...' %>
+            </small>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

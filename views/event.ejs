@@ -1,0 +1,80 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="hero countdown-layout">
+  <p class="eyebrow">Evenement public</p>
+  <div class="richtext-content"><%- renderedDescriptionHtml %></div>
+  <p>Debut: <strong><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></strong></p>
+  <div class="hero-actions">
+    <a class="btn" href="/event/<%= eventItem.token %>/upload">Deposer des photos</a>
+    <a class="btn btn-secondary" href="/event/<%= eventItem.token %>/gallery">Voir la galerie</a>
+  </div>
+
+  <section id="countdownScreen" class="countdown-screen" aria-live="polite" <%= shouldShowCountdown ? '' : 'hidden' %>>
+    <h2>L'evenement commence bientot</h2>
+    <p>Temps restant avant ouverture :</p>
+    <div id="countdownValue" class="countdown-value">--:--:--</div>
+  </section>
+
+  <section id="welcomeScreen" class="welcome-screen" aria-live="polite" <%= shouldShowCountdown ? 'hidden' : '' %>>
+    <h2>Bienvenue</h2>
+    <p>L'evenement est commence. Bonne session.</p>
+  </section>
+</section>
+
+<script>
+  (function initEventStatus() {
+    const startsAtIso = '<%= eventStartsAtIso || '' %>';
+    const startsAt = startsAtIso ? new Date(startsAtIso) : null;
+    const shouldShowCountdown = <%= shouldShowCountdown ? 'true' : 'false' %>;
+    const countdownScreen = document.getElementById('countdownScreen');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const countdownValue = document.getElementById('countdownValue');
+
+    function formatRemaining(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      return `${String(days).padStart(2, '0')}j ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+    }
+
+    function switchToWelcome() {
+      countdownScreen.hidden = true;
+      welcomeScreen.hidden = false;
+    }
+
+    function tick() {
+      if (!startsAt) {
+        switchToWelcome();
+        return;
+      }
+
+      const now = new Date();
+      const diff = startsAt.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        switchToWelcome();
+        return;
+      }
+
+      countdownValue.textContent = formatRemaining(diff);
+      setTimeout(tick, 1000);
+    }
+
+    if (!shouldShowCountdown) {
+      switchToWelcome();
+      return;
+    }
+
+    const initialNow = new Date('<%= nowIso %>');
+    if (!startsAt || startsAt.getTime() <= initialNow.getTime()) {
+      switchToWelcome();
+      return;
+    }
+
+    tick();
+  }());
+</script>
+<%- include('partials/footer') %>

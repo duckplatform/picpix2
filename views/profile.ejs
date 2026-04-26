@@ -1,0 +1,185 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="grid-columns">
+  <article class="card">
+    <p class="eyebrow">Compte</p>
+    <h1>Mon profil</h1>
+    <dl class="definition-list">
+      <div>
+        <dt>Email</dt>
+        <dd><%= user.email %></dd>
+      </div>
+      <div>
+        <dt>Role</dt>
+        <dd><%= user.role %></dd>
+      </div>
+      <div>
+        <dt>Statut</dt>
+        <dd><%= user.status %></dd>
+      </div>
+    </dl>
+  </article>
+
+  <article class="card">
+    <p class="eyebrow">Edition</p>
+    <h2>Mettre a jour mon profil</h2>
+    <form method="post" action="/profile?_method=PUT" class="form-grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <label>
+        <span>Nom complet</span>
+        <input type="text" name="fullName" value="<%= formData.fullName || user.fullName || '' %>" required maxlength="120" />
+        <% if (fieldErrors.fullName) { %><small class="field-error"><%= fieldErrors.fullName %></small><% } %>
+      </label>
+
+      <label>
+        <span>Nouveau mot de passe</span>
+        <input type="password" name="password" minlength="8" maxlength="72" />
+        <% if (fieldErrors.password) { %><small class="field-error"><%= fieldErrors.password %></small><% } %>
+      </label>
+
+      <label>
+        <span>Confirmation du nouveau mot de passe</span>
+        <input type="password" name="confirmPassword" minlength="8" maxlength="72" />
+        <% if (fieldErrors.confirmPassword) { %><small class="field-error"><%= fieldErrors.confirmPassword %></small><% } %>
+      </label>
+
+      <label>
+        <span>Mot de passe actuel</span>
+        <input type="password" name="currentPassword" maxlength="72" />
+        <% if (fieldErrors.currentPassword) { %><small class="field-error"><%= fieldErrors.currentPassword %></small><% } %>
+      </label>
+
+      <button class="btn" type="submit">Enregistrer</button>
+    </form>
+  </article>
+</section>
+
+<section class="grid-columns section-gap">
+  <article class="card">
+    <p class="eyebrow">Mes evenements</p>
+    <h2>Creer un evenement</h2>
+    <form method="post" action="/profile/events" class="form-grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <label>
+        <span>Nom de l'evenement</span>
+        <input type="text" name="name" value="<%= formData.name || '' %>" required maxlength="180" />
+        <% if (fieldErrors.name) { %><small class="field-error"><%= fieldErrors.name %></small><% } %>
+      </label>
+
+      <label>
+        <span>Description</span>
+        <textarea name="description" required minlength="10" maxlength="5000" rows="5"><%= formData.description || '' %></textarea>
+        <% if (fieldErrors.description) { %><small class="field-error"><%= fieldErrors.description %></small><% } %>
+      </label>
+
+      <label>
+        <span>Date et heure</span>
+        <input type="datetime-local" name="startsAt" value="<%= formData.startsAt || '' %>" required />
+        <% if (fieldErrors.startsAt) { %><small class="field-error"><%= fieldErrors.startsAt %></small><% } %>
+      </label>
+
+      <label>
+        <span>Statut</span>
+        <select name="status" required>
+          <option value="inactive" <%= (formData.status || 'inactive') === 'inactive' ? 'selected' : '' %>>inactive</option>
+          <option value="active" <%= formData.status === 'active' ? 'selected' : '' %>>active</option>
+        </select>
+        <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
+      </label>
+
+      <label>
+        <span>Theme visuel</span>
+        <select name="theme" required>
+          <% eventThemeOptions.forEach((themeItem) => { %>
+            <option value="<%= themeItem.key %>" <%= (formData.theme || 'classic') === themeItem.key ? 'selected' : '' %>>
+              <%= themeItem.icon %> <%= themeItem.label %>
+            </option>
+          <% }) %>
+        </select>
+        <% if (fieldErrors.theme) { %><small class="field-error"><%= fieldErrors.theme %></small><% } %>
+      </label>
+
+      <label>
+        <span>Transition slideshow</span>
+        <select name="slideshowTransition" required>
+          <% eventTransitionOptions.forEach((transitionItem) => { %>
+            <option value="<%= transitionItem.key %>" <%= (formData.slideshowTransition || 'fade') === transitionItem.key ? 'selected' : '' %>>
+              <%= transitionItem.label %>
+            </option>
+          <% }) %>
+        </select>
+        <% if (fieldErrors.slideshowTransition) { %><small class="field-error"><%= fieldErrors.slideshowTransition %></small><% } %>
+      </label>
+
+      <label>
+        <span>Source des photos</span>
+        <select name="uploadSourceMode" required>
+          <option value="default" <%= (formData.uploadSourceMode || 'default') === 'default' ? 'selected' : '' %>>Defaut</option>
+          <option value="camera_only" <%= formData.uploadSourceMode === 'camera_only' ? 'selected' : '' %>>Camera uniquement</option>
+          <option value="library_only" <%= formData.uploadSourceMode === 'library_only' ? 'selected' : '' %>>Phototheque uniquement</option>
+        </select>
+        <% if (fieldErrors.uploadSourceMode) { %><small class="field-error"><%= fieldErrors.uploadSourceMode %></small><% } %>
+      </label>
+
+      <label>
+        <span class="checkbox-label">
+          <input type="checkbox" name="uploadAllowMultiple" value="1" <%= formData.uploadAllowMultiple !== false ? 'checked' : '' %> />
+          Autoriser plusieurs photos d'affilee
+        </span>
+        <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
+      </label>
+
+      <button class="btn" type="submit">Creer l'evenement</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <p class="eyebrow">Mes evenements</p>
+    <h2>Liste de mes evenements</h2>
+    <% if (!userEvents.length) { %>
+      <p>Aucun evenement cree pour le moment.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Date/heure</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% userEvents.forEach((eventItem) => { %>
+              <tr>
+                <td><%= eventItem.name %></td>
+                <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
+                <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
+                <td>
+                  <div class="table-actions">
+                    <a class="btn btn-small" href="/event/<%= eventItem.token %>" target="_blank" rel="noopener noreferrer">Site</a>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/slideshow">Galerie</a>
+                    <% if (eventItem.status !== 'active') { %>
+                      <form method="post" action="/profile/events/<%= eventItem.id %>/activate" class="inline-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                        <button class="btn btn-secondary btn-small" type="submit">Activer</button>
+                      </form>
+                    <% } %>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/edit">Modifier</a>
+                    <form method="post" action="/profile/events/<%= eventItem.id %>?_method=DELETE" class="inline-form" onsubmit="return confirm('Supprimer cet evenement ? Cette action supprimera aussi toutes les donnees stockees de cet evenement.');">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button class="btn btn-danger btn-small" type="submit">Supprimer</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
+<%- include('partials/footer') %>

@@ -1,0 +1,104 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Mes evenements</p>
+    <h1>Modifier un evenement</h1>
+    <p>Seuls les champs metier sont modifiables. Les champs systeme restent geres automatiquement.</p>
+  </div>
+
+  <div class="definition-list">
+    <div>
+      <dt>UUID</dt>
+      <dd><code><%= editingEvent.uuid %></code></dd>
+    </div>
+    <div>
+      <dt>Token</dt>
+      <dd><code><%= editingEvent.token %></code></dd>
+    </div>
+  </div>
+
+  <form method="post" action="/profile/events/<%= editingEvent.id %>/regenerate-token" class="inline-form section-gap">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <button class="btn btn-secondary" type="submit">Regenerer le token</button>
+  </form>
+
+  <form method="post" action="/profile/events/<%= editingEvent.id %>?_method=PUT" class="form-grid section-gap">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <label>
+      <span>Nom de l'evenement</span>
+      <input type="text" name="name" value="<%= formData.name || '' %>" required maxlength="180" />
+      <% if (fieldErrors.name) { %><small class="field-error"><%= fieldErrors.name %></small><% } %>
+    </label>
+
+    <label>
+      <span>Description</span>
+      <textarea name="description" required minlength="10" maxlength="5000" rows="6"><%= formData.description || '' %></textarea>
+      <% if (fieldErrors.description) { %><small class="field-error"><%= fieldErrors.description %></small><% } %>
+    </label>
+
+    <label>
+      <span>Date et heure</span>
+      <input type="datetime-local" name="startsAt" value="<%= formData.startsAt || '' %>" required />
+      <% if (fieldErrors.startsAt) { %><small class="field-error"><%= fieldErrors.startsAt %></small><% } %>
+    </label>
+
+    <label>
+      <span>Statut</span>
+      <select name="status" required>
+        <option value="inactive" <%= (formData.status || 'inactive') === 'inactive' ? 'selected' : '' %>>inactive</option>
+        <option value="active" <%= formData.status === 'active' ? 'selected' : '' %>>active</option>
+      </select>
+      <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
+    </label>
+
+    <label>
+      <span>Theme visuel</span>
+      <select name="theme" required>
+        <% eventThemeOptions.forEach((themeItem) => { %>
+          <option value="<%= themeItem.key %>" <%= (formData.theme || 'classic') === themeItem.key ? 'selected' : '' %>>
+            <%= themeItem.icon %> <%= themeItem.label %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (fieldErrors.theme) { %><small class="field-error"><%= fieldErrors.theme %></small><% } %>
+    </label>
+
+    <label>
+      <span>Transition slideshow</span>
+      <select name="slideshowTransition" required>
+        <% eventTransitionOptions.forEach((transitionItem) => { %>
+          <option value="<%= transitionItem.key %>" <%= (formData.slideshowTransition || 'fade') === transitionItem.key ? 'selected' : '' %>>
+            <%= transitionItem.label %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (fieldErrors.slideshowTransition) { %><small class="field-error"><%= fieldErrors.slideshowTransition %></small><% } %>
+    </label>
+
+    <label>
+      <span>Source des photos</span>
+      <select name="uploadSourceMode" required>
+        <option value="default" <%= (formData.uploadSourceMode || 'default') === 'default' ? 'selected' : '' %>>Defaut</option>
+        <option value="camera_only" <%= formData.uploadSourceMode === 'camera_only' ? 'selected' : '' %>>Camera uniquement</option>
+        <option value="library_only" <%= formData.uploadSourceMode === 'library_only' ? 'selected' : '' %>>Phototheque uniquement</option>
+      </select>
+      <% if (fieldErrors.uploadSourceMode) { %><small class="field-error"><%= fieldErrors.uploadSourceMode %></small><% } %>
+    </label>
+
+    <label>
+      <span class="checkbox-label">
+        <input type="checkbox" name="uploadAllowMultiple" value="1" <%= formData.uploadAllowMultiple !== false ? 'checked' : '' %> />
+        Autoriser plusieurs photos d'affilee
+      </span>
+      <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
+    </label>
+
+    <div class="table-actions">
+      <button class="btn" type="submit">Enregistrer les modifications</button>
+      <a class="btn btn-secondary" href="/profile">Retour au profil</a>
+    </div>
+  </form>
+</section>
+<%- include('partials/footer') %>

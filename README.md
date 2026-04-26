@@ -1,119 +1,75 @@
-# picpix2
+# PicPix2
 
-Application web Node.js (Express) + MySQL, compatible Passenger, avec:
+Application web Node.js + Express + MySQL avec vues EJS, securisation HTTP, monitoring de base et gestion des comptes utilisateurs.
 
-- Inscription / connexion utilisateur
-- Gestion de profil utilisateur
-- 2 rôles: `user`, `admin`
-- Interface admin CRUD pour gérer les utilisateurs
-- Interface simple en Bootstrap 5
+## Fonctionnalites principales
 
-## Stack
+- inscription utilisateur avec validation serveur et protection CSRF
+- connexion / deconnexion avec session securisee
+- profil utilisateur avec mise a jour du nom et du mot de passe
+- creation d'evenements par utilisateur (UUID, nom, date/heure, statut actif/inactif, token 10 caracteres)
+- consultation des evenements personnels depuis le profil
+- interface d'administration pour lister, creer, modifier et supprimer des utilisateurs
+- interface d'administration avec CRUD complet des evenements
+- compte administrateur par defaut: admin@example.com / Admin1234
+- logs applicatifs via Winston dans logs/app.log et logs/error.log
+- endpoint de monitoring: /health
 
-- Node.js + Express
-- Sequelize ORM
-- MySQL (`mysql2`)
-- Sessions serveur (`express-session` + `connect-session-sequelize`)
-- Templates EJS + Bootstrap
-- Sécurité: Helmet, hash bcrypt, rate-limit login/register, validations serveur
-- Logs: Morgan + Winston dans `logs/`
+## Installation locale
 
-## Prérequis
+1. Installer les dependances:
 
-- Node.js 20+
-- MySQL 8+
+```bash
+npm install
+```
 
-## Installation
+2. Configurer la base MySQL avec les variables d'environnement attendues:
 
-1. Installer les dépendances:
+```bash
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_NAME=picpix
+export DB_USER=picpix
+export DB_PASSWORD=picpix_dev
+export SESSION_SECRET="remplacer-par-un-secret-fort"
+```
 
-	npm install
+3. Initialiser la base:
 
-2. Créer le fichier d'environnement:
+```bash
+mysql -u "$DB_USER" -p"$DB_PASSWORD" < database/install.sql
+```
 
-	cp .env.example .env
+4. Demarrer l'application:
 
-3. Renseigner au minimum les variables DB et `SESSION_SECRET` dans `.env`.
+```bash
+npm start
+```
 
-4. Démarrer en développement:
+## Utilisation
 
-	npm run dev
+- Accueil: /
+- Inscription: /register
+- Connexion: /login
+- Profil utilisateur: /profile
+- Creation evenement utilisateur: /profile (section Mes evenements)
+- Administration utilisateurs et evenements: /admin
+- Sante applicative: /health
 
-5. Ouvrir:
+## Maintenance et securite
 
-	http://localhost:3000
+- Helmet applique les en-tetes HTTP de securite.
+- Les formulaires sensibles sont proteges par token CSRF.
+- Les tentatives d'authentification sont limitees par IP.
+- Les mots de passe sont haches avec bcrypt.
+- Le dernier administrateur actif ne peut pas etre desactive ni supprime.
 
-## Lancement avec GitHub Codespaces
+## Tests
 
-Le projet contient une configuration prête à l'emploi dans [`.devcontainer/`](.devcontainer/README.md).
+Executer la suite complete:
 
-À la création du Codespace:
+```bash
+npm test
+```
 
-- un service MySQL est démarré automatiquement
-- les dépendances Node.js sont installées
-- le fichier `.env` est créé/mis à jour pour pointer vers MySQL (`DB_HOST=mysql`)
-
-Puis lancer l'application:
-
-	npm run dev
-
-## Variables d'environnement
-
-Voir `.env.example`.
-
-Variables importantes:
-
-- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-- `SESSION_SECRET`
-- `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` (création admin auto au démarrage)
-
-## Scripts
-
-- `npm run dev`: mode développement
-- `npm start`: mode production
-- `npm test`: tests automatisés
-
-## Déploiement Passenger (cPanel / VPS)
-
-1. Installer les dépendances en production:
-
-	npm ci --omit=dev
-
-2. Configurer l'application Node.js dans Passenger:
-
-- Startup file: `src/app.js`
-- Node version: 20+
-- Variables d'environnement: celles du `.env.example`
-
-3. Redémarrer l'application via l'interface Passenger.
-
-## Architecture
-
-- `src/app.js`: configuration Express + point d'entrée runtime (init DB, seed admin, compat Passenger)
-- `src/models/`: modèles Sequelize
-- `src/routes/`: routes auth/profile/admin
-- `src/middleware/`: auth et validations
-- `views/`: templates EJS Bootstrap
-- `public/css/`: styles statiques
-- `tests/`: tests Jest + Supertest
-
-## Sécurité appliquée
-
-- Hash de mot de passe avec bcrypt
-- Session HTTPOnly, SameSite et durée limitée
-- Rate limiting sur endpoints d'authentification
-- Validation stricte des entrées (serveur)
-- Contrôle d'accès par rôle (`admin`)
-
-## Monitoring et logs
-
-- Endpoint santé: `GET /health`
-- Logs applicatifs: `logs/combined.log`
-- Logs erreurs: `logs/error.log`
-
-## Parcours utilisateur
-
-- Un visiteur peut créer un compte via `/register`
-- Connexion via `/login`
-- Profil personnel via `/profile`
-- Un admin peut gérer les utilisateurs via `/admin/users`
+Les tests HTTP utilisent un stockage memoire isole en environnement de test pour verifier inscription, connexion, profil et CRUD administrateur sans dependre de MySQL.

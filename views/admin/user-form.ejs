@@ -1,0 +1,92 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1><%= mode === 'create' ? 'Creer un utilisateur' : 'Modifier un utilisateur' %></h1>
+    <p>Configurez le profil, le role et le statut du compte.</p>
+  </div>
+  <form method="post" action="<%= mode === 'create' ? '/admin/users' : `/admin/users/${editingUser.id}?_method=PUT` %>" class="form-grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <label>
+      <span>Nom complet</span>
+      <input type="text" name="fullName" value="<%= formData.fullName || '' %>" required maxlength="120" />
+      <% if (fieldErrors.fullName) { %><small class="field-error"><%= fieldErrors.fullName %></small><% } %>
+    </label>
+
+    <label>
+      <span>Email</span>
+      <input type="email" name="email" value="<%= formData.email || '' %>" required maxlength="190" />
+      <% if (fieldErrors.email) { %><small class="field-error"><%= fieldErrors.email %></small><% } %>
+    </label>
+
+    <label>
+      <span>Role</span>
+      <select name="role" required>
+        <option value="user" <%= (formData.role || 'user') === 'user' ? 'selected' : '' %>>user</option>
+        <option value="admin" <%= formData.role === 'admin' ? 'selected' : '' %>>admin</option>
+      </select>
+      <% if (fieldErrors.role) { %><small class="field-error"><%= fieldErrors.role %></small><% } %>
+    </label>
+
+    <label>
+      <span>Statut</span>
+      <select name="status" required>
+        <option value="active" <%= (formData.status || 'active') === 'active' ? 'selected' : '' %>>active</option>
+        <option value="disabled" <%= formData.status === 'disabled' ? 'selected' : '' %>>disabled</option>
+      </select>
+      <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
+    </label>
+
+    <label>
+      <span><%= mode === 'create' ? 'Mot de passe' : 'Nouveau mot de passe (optionnel)' %></span>
+      <input type="password" name="password" <%= mode === 'create' ? 'required' : '' %> minlength="8" maxlength="72" />
+      <% if (fieldErrors.password) { %><small class="field-error"><%= fieldErrors.password %></small><% } %>
+    </label>
+
+    <button class="btn" type="submit"><%= mode === 'create' ? 'Creer le compte' : 'Enregistrer les modifications' %></button>
+  </form>
+</section>
+
+<% if (mode === 'edit') { %>
+  <section class="card table-card section-gap">
+    <div>
+      <p class="eyebrow">Evenements utilisateur</p>
+      <h2>Evenements de <%= editingUser.fullName %></h2>
+    </div>
+
+    <% if (!userEvents || !userEvents.length) { %>
+      <p>Aucun evenement pour cet utilisateur.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Date/heure</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% userEvents.forEach((eventItem) => { %>
+              <tr>
+                <td><%= eventItem.name %></td>
+                <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
+                <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
+                <td>
+                  <div class="table-actions">
+                    <a class="btn btn-secondary btn-small" href="/admin/events/<%= eventItem.id %>/edit">Admin</a>
+                    <a class="btn btn-small" href="/event/<%= eventItem.token %>" target="_blank" rel="noopener noreferrer">Site</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+<%- include('../partials/footer') %>

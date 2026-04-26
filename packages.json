@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "NODE_ENV=test EVENT_STORAGE_ROOT=storage-test/events mocha tests/**/*.test.js --timeout 10000 --exit",
+    "test": "NODE_ENV=test mocha tests/**/*.test.js --timeout 10000 --exit",
     "db:reset": "bash .devcontainer/reset-db.sh"
   },
   "keywords": [
@@ -22,7 +22,6 @@
     "bcryptjs": "^2.4.3",
     "connect-flash": "^0.1.1",
     "csrf-sync": "^4.2.1",
-    "dropzone": "^6.0.0-beta.2",
     "ejs": "^3.1.10",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
@@ -32,11 +31,9 @@
     "marked": "^18.0.2",
     "method-override": "^3.0.0",
     "morgan": "^1.10.0",
-    "multer": "^2.1.1",
     "mysql2": "^3.6.5",
     "qrcode": "^1.5.4",
     "sanitize-html": "^2.17.3",
-    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "winston": "^3.11.0"
   },

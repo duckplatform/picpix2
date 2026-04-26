@@ -1,0 +1,21 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Acces evenement</p>
+    <p>Avant d'acceder a l'espace prive, renseignez simplement votre nom.</p>
+  </div>
+
+  <form method="post" action="/event/<%= eventItem.token %>/register" class="form-grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <label>
+      <span>Votre nom</span>
+      <input type="text" name="guestName" value="<%= formData.guestName || '' %>" required maxlength="120" />
+      <% if (fieldErrors.guestName) { %><small class="field-error"><%= fieldErrors.guestName %></small><% } %>
+    </label>
+
+    <button class="btn" type="submit">Entrer dans l'evenement</button>
+  </form>
+</section>
+<%- include('partials/footer') %>

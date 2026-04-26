@@ -1,0 +1,162 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1><%= mode === 'create' ? 'Creer un evenement' : 'Modifier un evenement' %></h1>
+    <p>Renseigner uniquement les champs metier utiles de l'evenement.</p>
+  </div>
+
+  <% if (mode === 'edit') { %>
+    <div class="definition-list">
+      <div>
+        <dt>UUID</dt>
+        <dd><code><%= editingEvent.uuid %></code></dd>
+      </div>
+      <div>
+        <dt>Token</dt>
+        <dd><code><%= editingEvent.token %></code></dd>
+      </div>
+    </div>
+    <form method="post" action="/admin/events/<%= editingEvent.id %>/regenerate-token" class="inline-form section-gap">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-secondary" type="submit">Regenerer le token</button>
+    </form>
+  <% } %>
+
+  <form method="post" action="<%= mode === 'create' ? '/admin/events' : `/admin/events/${editingEvent.id}?_method=PUT` %>" class="form-grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <label>
+      <span>Nom de l'evenement</span>
+      <input type="text" name="name" value="<%= formData.name || '' %>" required maxlength="180" />
+      <% if (fieldErrors.name) { %><small class="field-error"><%= fieldErrors.name %></small><% } %>
+    </label>
+
+    <label>
+      <span>Description</span>
+      <textarea name="description" required minlength="10" maxlength="5000" rows="6"><%= formData.description || '' %></textarea>
+      <% if (fieldErrors.description) { %><small class="field-error"><%= fieldErrors.description %></small><% } %>
+    </label>
+
+    <label>
+      <span>Proprietaire</span>
+      <select name="ownerUserId" required>
+        <% users.forEach((item) => { %>
+          <option value="<%= item.id %>" <%= Number(formData.ownerUserId || 0) === item.id ? 'selected' : '' %>>
+            <%= item.fullName %> (<%= item.email %>)
+          </option>
+        <% }) %>
+      </select>
+      <% if (fieldErrors.ownerUserId) { %><small class="field-error"><%= fieldErrors.ownerUserId %></small><% } %>
+    </label>
+
+    <label>
+      <span>Date et heure</span>
+      <input type="datetime-local" name="startsAt" value="<%= formData.startsAt || '' %>" required />
+      <% if (fieldErrors.startsAt) { %><small class="field-error"><%= fieldErrors.startsAt %></small><% } %>
+    </label>
+
+    <label>
+      <span>Statut</span>
+      <select name="status" required>
+        <option value="inactive" <%= (formData.status || 'inactive') === 'inactive' ? 'selected' : '' %>>inactive</option>
+        <option value="active" <%= formData.status === 'active' ? 'selected' : '' %>>active</option>
+      </select>
+      <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
+    </label>
+
+    <label>
+      <span>Theme visuel</span>
+      <select name="theme" required>
+        <% eventThemeOptions.forEach((themeItem) => { %>
+          <option value="<%= themeItem.key %>" <%= (formData.theme || 'classic') === themeItem.key ? 'selected' : '' %>>
+            <%= themeItem.icon %> <%= themeItem.label %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (fieldErrors.theme) { %><small class="field-error"><%= fieldErrors.theme %></small><% } %>
+    </label>
+
+    <label>
+      <span>Transition slideshow</span>
+      <select name="slideshowTransition" required>
+        <% eventTransitionOptions.forEach((transitionItem) => { %>
+          <option value="<%= transitionItem.key %>" <%= (formData.slideshowTransition || 'fade') === transitionItem.key ? 'selected' : '' %>>
+            <%= transitionItem.label %>
+          </option>
+        <% }) %>
+      </select>
+      <% if (fieldErrors.slideshowTransition) { %><small class="field-error"><%= fieldErrors.slideshowTransition %></small><% } %>
+    </label>
+
+    <label>
+      <span>Source des photos</span>
+      <select name="uploadSourceMode" required>
+        <option value="default" <%= (formData.uploadSourceMode || 'default') === 'default' ? 'selected' : '' %>>Defaut</option>
+        <option value="camera_only" <%= formData.uploadSourceMode === 'camera_only' ? 'selected' : '' %>>Camera uniquement</option>
+        <option value="library_only" <%= formData.uploadSourceMode === 'library_only' ? 'selected' : '' %>>Phototheque uniquement</option>
+      </select>
+      <% if (fieldErrors.uploadSourceMode) { %><small class="field-error"><%= fieldErrors.uploadSourceMode %></small><% } %>
+    </label>
+
+    <label>
+      <span class="checkbox-label">
+        <input type="checkbox" name="uploadAllowMultiple" value="1" <%= formData.uploadAllowMultiple !== false ? 'checked' : '' %> />
+        Autoriser plusieurs photos d'affilee
+      </span>
+      <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
+    </label>
+
+    <button class="btn" type="submit"><%= mode === 'create' ? 'Creer evenement' : 'Mettre a jour evenement' %></button>
+  </form>
+</section>
+
+<% if (mode === 'edit') { %>
+  <section class="card table-card section-gap">
+    <div>
+      <p class="eyebrow">Photos evenement</p>
+      <h2>Apercu des fichiers</h2>
+    </div>
+
+    <% if (!eventFiles || !eventFiles.length) { %>
+      <p>Aucun fichier photo pour cet evenement.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Apercu</th>
+              <th>Nom original</th>
+              <th>Taille</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% eventFiles.forEach((fileItem) => { %>
+              <tr>
+                <td>
+                  <img
+                    class="admin-photo-thumb"
+                    src="/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/sm"
+                    alt="<%= fileItem.originalName %>"
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src='/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/original';"
+                  />
+                </td>
+                <td><%= fileItem.originalName %></td>
+                <td><%= Math.round(fileItem.sizeBytes / 1024) %> Ko</td>
+                <td><%= new Date(fileItem.createdAt).toLocaleString('fr-FR') %></td>
+                <td>
+                  <a class="btn btn-secondary btn-small" href="/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/original" target="_blank" rel="noopener noreferrer">Ouvrir</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+<%- include('../partials/footer') %>
