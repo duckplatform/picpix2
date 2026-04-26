@@ -1,0 +1,33 @@
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="/">PicPix2</a>
+    <nav class="nav-links" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <% if (user) { %>
+        <a href="/profile">Profil</a>
+        <% if (user.role === 'admin') { %>
+          <a href="/admin">Administration</a>
+        <% } %>
+        <form method="post" action="/logout" class="inline-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+          <button class="btn btn-secondary btn-inline" type="submit">Deconnexion</button>
+        </form>
+      <% } else { %>
+        <a href="/register">Inscription</a>
+        <a href="/login">Connexion</a>
+      <% } %>
+    </nav>
+  </div>
+</header>
+
+<main class="container page-shell">
+  <% if (messages.error.length || messages.success.length) { %>
+    <section class="flash-stack" aria-label="Messages systeme">
+      <% messages.error.forEach((message) => { %>
+        <div class="alert alert-error"><%= message %></div>
+      <% }) %>
+      <% messages.success.forEach((message) => { %>
+        <div class="alert alert-success"><%= message %></div>
+      <% }) %>
+    </section>
+  <% } %>

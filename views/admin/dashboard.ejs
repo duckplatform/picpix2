@@ -1,0 +1,46 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="card admin-header">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Gestion des utilisateurs</h1>
+    <p>Liste complete des comptes, profils et droits d'acces.</p>
+  </div>
+  <a class="btn" href="/admin/users/new">Ajouter un utilisateur</a>
+</section>
+
+<section class="card table-card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Statut</th>
+        <th>Derniere connexion</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% users.forEach((item) => { %>
+        <tr>
+          <td><%= item.fullName %></td>
+          <td><%= item.email %></td>
+          <td><span class="badge badge-<%= item.role %>"><%= item.role %></span></td>
+          <td><span class="badge badge-<%= item.status %>"><%= item.status %></span></td>
+          <td><%= item.lastLoginAt ? new Date(item.lastLoginAt).toLocaleString('fr-FR') : 'Jamais' %></td>
+          <td>
+            <div class="table-actions">
+              <a class="btn btn-secondary btn-small" href="/admin/users/<%= item.id %>/edit">Modifier</a>
+              <form method="post" action="/admin/users/<%= item.id %>?_method=DELETE" class="inline-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button class="btn btn-danger btn-small" type="submit">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</section>
+<%- include('../partials/footer') %>

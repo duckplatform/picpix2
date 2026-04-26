@@ -1,18 +1,26 @@
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title><%= title %> - PicPix2</title>
-    <link rel="stylesheet" href="/styles.css" />
-  </head>
-  <body class="<%= pageClass || '' %>">
-    <main class="container">
-      <section class="hero">
-        <h1>Bienvenue sur PicPix2</h1>
-        <p>Site web Node.js simple et operationnel.</p>
-        <a class="btn" href="/health">Verifier la sante de l'application</a>
-      </section>
-    </main>
-  </body>
-</html>
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="hero hero-grid">
+  <div>
+    <p class="eyebrow">Gestion securisee des comptes</p>
+    <h1>Bienvenue sur PicPix2</h1>
+    <p>Inscription, connexion, profil utilisateur et administration centralisee sont maintenant disponibles.</p>
+    <div class="hero-actions">
+      <% if (!user) { %>
+        <a class="btn" href="/register">Creer un compte</a>
+        <a class="btn btn-secondary" href="/login">Se connecter</a>
+      <% } else { %>
+        <a class="btn" href="/profile">Ouvrir mon profil</a>
+        <% if (user.role === 'admin') { %>
+          <a class="btn btn-secondary" href="/admin">Ouvrir l'administration</a>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+  <aside class="hero-panel">
+    <h2>Surveillance rapide</h2>
+    <p>Le point de sante et les journaux applicatifs restent accessibles pour le monitoring.</p>
+    <a class="btn btn-secondary" href="/health">Verifier la sante de l'application</a>
+  </aside>
+</section>
+<%- include('partials/footer') %>

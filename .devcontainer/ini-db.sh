@@ -17,9 +17,9 @@ set -euo pipefail
 # ── Variables (avec valeurs par défaut pour le Codespace) ───
 DB_HOST="${DB_HOST:-mysql}"
 DB_PORT="${DB_PORT:-3306}"
-DB_USER="${DB_USER:-lanparty}"
-DB_PASSWORD="${DB_PASSWORD:-lanparty_dev}"
-DB_NAME="${DB_NAME:-lanpartymanager}"
+DB_USER="${DB_USER:-picpix}"
+DB_PASSWORD="${DB_PASSWORD:-picpix_dev}"
+DB_NAME="${DB_NAME:-picpix}"
 
 WORKSPACE="/workspace"
 SQL_INSTALL="${WORKSPACE}/database/install.sql"

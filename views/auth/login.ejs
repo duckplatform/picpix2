@@ -1,0 +1,27 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Authentification</p>
+    <h1>Connexion</h1>
+    <p>Connectez-vous avec votre compte utilisateur ou administrateur.</p>
+  </div>
+  <form method="post" action="/login" class="form-grid">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+    <label>
+      <span>Email</span>
+      <input type="email" name="email" value="<%= formData.email || '' %>" required maxlength="190" />
+      <% if (fieldErrors.email) { %><small class="field-error"><%= fieldErrors.email %></small><% } %>
+    </label>
+
+    <label>
+      <span>Mot de passe</span>
+      <input type="password" name="password" required maxlength="72" />
+      <% if (fieldErrors.password) { %><small class="field-error"><%= fieldErrors.password %></small><% } %>
+    </label>
+
+    <button class="btn" type="submit">Se connecter</button>
+  </form>
+</section>
+<%- include('../partials/footer') %>
