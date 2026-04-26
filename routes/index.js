@@ -174,8 +174,14 @@ async function loadEventByTokenOr404(req, res) {
 
 function createEventUploadMiddleware(maxFiles = 10) {
   const storage = multer.diskStorage({
-    destination(req, file, callback) {
-      callback(null, eventStore.getEventStoragePath(req.eventItem.uuid));
+    async destination(req, file, callback) {
+      try {
+        const dir = eventStore.getEventStoragePath(req.eventItem.uuid);
+        await fs.mkdir(dir, { recursive: true });
+        callback(null, dir);
+      } catch (err) {
+        callback(err);
+      }
     },
     filename(req, file, callback) {
       const extension = sanitizeFileExtension(file.originalname);
@@ -197,7 +203,13 @@ function createEventUploadMiddleware(maxFiles = 10) {
 
       callback(null, true);
     },
-  }).array('photos', maxFiles);
+  }).fields([
+    { name: 'photos', maxCount: maxFiles },
+    ...Array.from({ length: maxFiles }, (_, index) => ({
+      name: `photos[${index}]`,
+      maxCount: 1,
+    })),
+  ]);
 }
 
 function passwordRules(fieldName = 'password', required = true) {
@@ -455,8 +467,8 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
         sourceMode: eventItem.uploadSourceMode,
         allowMultiple: eventItem.uploadAllowMultiple,
       },
-      headCssPaths: ['/vendor/uppy/uppy.min.css'],
-      footerScriptPaths: ['/vendor/uppy/uppy.min.js', '/event-upload.js'],
+      headCssPaths: ['/vendor/dropzone/dropzone.css'],
+      footerScriptPaths: ['/vendor/dropzone/dropzone-min.js', '/event-upload.js', '/camera.js'],
       uploadedFiles,
     });
   } catch (err) {
@@ -499,16 +511,26 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
           return res.status(413).json({ message: 'Trop de fichiers envoyes en une seule fois.' });
         }
 
-        return next(uploadErr);
+        if (uploadErr.code === 'ENOENT') {
+          logger.error('[EVENT] Répertoire de stockage inaccessible :', uploadErr.message);
+          return res.status(500).json({ message: 'Erreur de stockage serveur. Veuillez réessayer.' });
+        }
+
+        logger.error('[EVENT] Erreur upload inattendue :', uploadErr.message);
+        return res.status(500).json({ message: 'Erreur lors du traitement du fichier.' });
       }
 
-      if (!req.files || req.files.length === 0) {
+      const uploadedFiles = req.files
+        ? Object.values(req.files).flat()
+        : [];
+
+      if (uploadedFiles.length === 0) {
         return res.status(400).json({ message: 'Aucun fichier image recu.' });
       }
 
       try {
         const createdFiles = [];
-        for (const file of req.files) {
+        for (const file of uploadedFiles) {
           const checksumSha256 = await computeFileChecksum(file.path);
           const record = await eventFileStore.createFileRecord({
             eventId: eventItem.id,
@@ -529,8 +551,8 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
           files: createdFiles,
         });
       } catch (err) {
-        if (req.files) {
-          await Promise.all(req.files.map((file) => fs.rm(file.path, { force: true })));
+        if (uploadedFiles.length > 0) {
+          await Promise.all(uploadedFiles.map((file) => fs.rm(file.path, { force: true })));
         }
         return next(err);
       }

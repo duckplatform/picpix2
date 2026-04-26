@@ -220,6 +220,40 @@ describe('Tests applicatifs HTTP', () => {
       expect(await pathExists(storedFilePath)).to.equal(true);
     });
 
+    it('POST /event/:token/upload accepte aussi le format de champs photos[index] emis par Dropzone en multi-upload', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Galerie Dropzone',
+        description: 'Upload multi-fichiers depuis Dropzone.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Dropzone User');
+
+      const uploadPage = await agent.get(`/event/${createdEvent.token}/upload`);
+      const uploadCsrfToken = extractCsrfToken(uploadPage.text);
+
+      const uploadResponse = await agent
+        .post(`/event/${createdEvent.token}/upload`)
+        .set('x-csrf-token', uploadCsrfToken)
+        .attach('photos[0]', Buffer.from('fake image payload 1'), {
+          filename: 'photo-1.jpg',
+          contentType: 'image/jpeg',
+        })
+        .attach('photos[1]', Buffer.from('fake image payload 2'), {
+          filename: 'photo-2.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(uploadResponse.status).to.equal(201);
+      expect(uploadResponse.body.files).to.have.lengthOf(2);
+      expect(uploadResponse.body.files[0].originalName).to.equal('photo-1.jpg');
+      expect(uploadResponse.body.files[1].originalName).to.equal('photo-2.jpg');
+    });
+
     it('POST /event/:token/upload refuse plusieurs fichiers si l\'evenement desactive les uploads multiples', async () => {
       const owner = await userStore.findByEmail('admin@example.com');
       const createdEvent = await eventStore.createEvent({

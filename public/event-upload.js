@@ -1,8 +1,10 @@
 (function initEventUploadPage() {
-  const dashboardTarget = document.getElementById('uppy-dashboard');
-  if (!dashboardTarget || typeof window.Uppy === 'undefined') {
+  const dropzoneHost = document.getElementById('dropzone-uploader');
+  if (!dropzoneHost || typeof window.Dropzone === 'undefined') {
     return;
   }
+
+  window.Dropzone.autoDiscover = false;
 
   const csrfInput = document.getElementById('upload-csrf');
   const endpointInput = document.getElementById('upload-endpoint');
@@ -47,66 +49,70 @@
     uploadedFilesTableBody.insertBefore(row, uploadedFilesTableBody.firstChild);
   }
 
-  const uppy = new window.Uppy.Uppy({
-    autoProceed: false,
-    allowMultipleUploadBatches: allowMultiple,
-    restrictions: {
-      maxFileSize: 10 * 1024 * 1024,
-      maxNumberOfFiles: allowMultiple ? 10 : 1,
-      allowedFileTypes: ['image/*'],
-    },
-  });
-
-  uppy.use(window.Uppy.Dashboard, {
-    inline: true,
-    target: '#uppy-dashboard',
-    proudlyDisplayPoweredByUppy: false,
-    showProgressDetails: true,
-    note: dashboardNote,
-    hideRetryButton: false,
-    hidePauseResumeButton: true,
-    doneButtonHandler: null,
-    width: '100%',
-    height: 460,
-    disableLocalFiles: isCameraOnly,
-  });
-
-  if (!isLibraryOnly) {
-    uppy.use(window.Uppy.Webcam, {
-      target: window.Uppy.Dashboard,
-      modes: ['picture'],
-      mirror: false,
-      showRecordingLength: false,
-      showVideoSourceDropdown: true,
-      videoConstraints: {
-        facingMode: 'environment',
-      },
-    });
-  }
-
-  uppy.use(window.Uppy.XHRUpload, {
-    endpoint: endpointInput.value,
-    fieldName: 'photos',
+  const dropzone = new window.Dropzone(dropzoneHost, {
+    url: endpointInput.value,
+    autoProcessQueue: true,
+    uploadMultiple: allowMultiple,
+    parallelUploads: allowMultiple ? 10 : 1,
+    maxFiles: allowMultiple ? 10 : 1,
+    maxFilesize: 10,
+    acceptedFiles: 'image/*',
+    paramName: 'photos',
+    clickable: true,
+    addRemoveLinks: true,
+    dictDefaultMessage: dashboardNote,
+    dictRemoveFile: 'Retirer',
     headers: {
       'x-csrf-token': csrfInput.value,
     },
-    limit: 3,
+    init: function initDropzone() {
+      const hiddenInput = this.hiddenFileInput;
+      if (!hiddenInput) {
+        return;
+      }
+
+      hiddenInput.setAttribute('accept', 'image/*');
+
+      if (allowMultiple) {
+        hiddenInput.setAttribute('multiple', 'multiple');
+      } else {
+        hiddenInput.removeAttribute('multiple');
+      }
+
+      if (isCameraOnly) {
+        hiddenInput.setAttribute('capture', 'environment');
+      } else {
+        hiddenInput.removeAttribute('capture');
+      }
+    },
   });
 
-  uppy.on('upload-success', function onUploadSuccess(file, response) {
-    if (response && response.body && Array.isArray(response.body.files)) {
-      response.body.files.forEach(appendUploadedFileRow);
+  dropzone.on('error', function onError(file, message) {
+    const text = typeof message === 'string' ? message : (message && message.message) || `Erreur d'upload sur ${file.name}.`;
+    renderMessage(text, 'error');
+  });
+
+  dropzone.on('success', function onSuccess(file, response) {
+    if (response && Array.isArray(response.files)) {
+      response.files.forEach(appendUploadedFileRow);
     }
 
-    renderMessage((response && response.body && response.body.message) || `Photo envoyee : ${file.name}`, 'success');
+    renderMessage((response && response.message) || `Photo televersee : ${file.name}`, 'success');
   });
 
-  uppy.on('upload-error', function onUploadError(file, error, response) {
-    const responseMessage = response && response.body && response.body.message;
-    renderMessage(responseMessage || error.message || `Erreur d'upload sur ${file.name}.`, 'error');
+  dropzone.on('successmultiple', function onSuccessMultiple(files, response) {
+    if (!response || !Array.isArray(response.files)) {
+      return;
+    }
+
+    renderMessage((response && response.message) || `${files.length} fichier(s) televerse(s) avec succes.`, 'success');
   });
 
-  uppy.on('restriction-failed', function onRestrictionFailed(file, error) {
-    renderMessage(error.message || `Fichier refuse : ${file.name}`, 'error');
+  dropzone.on('maxfilesexceeded', function onMaxExceeded(file) {
+    dropzone.removeFile(file);
+    renderMessage('Trop de fichiers selectionnes pour cet evenement.', 'error');
   });
+
+  // Expose l'instance pour camera.js
+  window.dropzoneInstance = dropzone;
 }());

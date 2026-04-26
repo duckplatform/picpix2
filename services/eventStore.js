@@ -378,9 +378,33 @@ function resetTestState() {
   nextTestEventId = 1;
 }
 
+/**
+ * Crée les répertoires de stockage manquants pour tous les événements existants.
+ * Appelé au démarrage du serveur pour corriger les événements créés avant ce mécanisme.
+ */
+async function ensureAllStorageDirectories() {
+  if (useTestStore()) {
+    // En mode test le stockage disque n'est pas utilisé
+    return;
+  }
+
+  let rows;
+  try {
+    [rows] = await pool.query('SELECT uuid FROM events');
+  } catch (err) {
+    // Si la BDD n'est pas encore disponible au démarrage on ne bloque pas
+    return;
+  }
+
+  await Promise.all(
+    rows.map((row) => fs.mkdir(eventStoragePath(row.uuid), { recursive: true })),
+  );
+}
+
 module.exports = {
   createEvent,
   deleteEvent,
+  ensureAllStorageDirectories,
   findById,
   findByToken,
   generateUniqueToken,

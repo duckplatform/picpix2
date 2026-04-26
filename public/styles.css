@@ -274,22 +274,346 @@ textarea:focus {
 }
 
 .upload-mobile-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
   margin: 18px 0;
 }
 
-.uppy-host .uppy-Dashboard-AddFiles {
+.btn-camera {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.btn-camera:hover {
+  background: #1e40af;
+}
+
+/* ── Modal Caméra ─────────────────────────────────────────────── */
+
+.camera-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.camera-modal[hidden] {
+  display: none;
+}
+
+.camera-modal-inner {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  width: 100%;
+  max-width: 640px;
+  height: min(96svh, 900px);
+  background: #111;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.camera-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  position: relative;
+  z-index: 2;
+}
+
+.camera-counter {
+  font-size: 0.9rem;
+  color: #ccc;
+  font-weight: 600;
+}
+
+.camera-viewfinder {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  min-height: clamp(320px, 58svh, 640px);
+  overflow: hidden;
+}
+
+.camera-viewfinder video {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.camera-error {
+  color: #fca5a5;
+  background: rgba(185, 28, 28, 0.2);
+  border: 1px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 10px 12px 0;
+  font-size: 0.9rem;
+}
+
+.camera-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  padding: 7px 0;
+  margin: 0;
+  position: relative;
+  z-index: 3;
+}
+
+.camera-shutter {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  padding: 0;
+  line-height: 1;
+  border: 3px solid #fff;
+  background: #e11d48;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-shutter:hover {
+  background: #be123c;
+}
+
+.camera-shutter:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.camera-thumbnails {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 0 12px 4px;
+  min-height: 0;
+  max-height: 70px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.camera-thumb {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #555;
+  flex-shrink: 0;
+}
+
+.camera-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: 0;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.camera-footer {
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  display: flex;
+  justify-content: center;
+}
+
+.camera-footer .btn {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.camera-footer .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Fin Modal Caméra ─────────────────────────────────────────── */
+
+
+.upload-hint {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 0.92rem;
+}
+
+.dropzone-host {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  min-height: 220px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.dropzone-host .dz-message {
+  margin: 28px 0;
+  color: var(--muted);
+}
+
+/* ── Vignettes Dropzone ────────────────────────────────────────── */
+
+.dropzone-host .dz-preview {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 8px;
+  position: relative;
+}
+
+.dropzone-host .dz-preview .dz-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dropzone-host .dz-preview .dz-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: 10px;
 }
 
-.uppy-host .uppy-Dashboard-inner,
-.uppy-host .uppy-DashboardContent-back,
-.uppy-host .uppy-DashboardContent-panel {
-  border-radius: 12px;
+/* Barre de progression */
+.dropzone-host .dz-preview .dz-progress {
+  position: absolute;
+  bottom: 38px;
+  left: 4px;
+  right: 4px;
+  height: 5px;
+  background: rgba(15, 118, 110, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.4s ease;
 }
 
-.uppy-host .uppy-Dashboard-inner {
-  border: 1px solid var(--border);
+.dropzone-host .dz-preview.dz-success .dz-progress {
+  opacity: 0;
 }
+
+.dropzone-host .dz-preview .dz-progress .dz-upload {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+/* Nom du fichier et bouton retirer — sans espace excessif */
+.dropzone-host .dz-preview .dz-details {
+  display: none; /* on utilise dz-filename seul via dz-filename */
+}
+
+.dropzone-host .dz-preview .dz-filename {
+  max-width: 80px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 4px 0 2px;
+}
+
+.dropzone-host .dz-preview .dz-filename span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.dropzone-host .dz-preview .dz-remove {
+  font-size: 0.7rem;
+  color: var(--danger);
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+}
+
+.dropzone-host .dz-preview .dz-remove:hover {
+  text-decoration: underline;
+}
+
+/* Icône de succès / erreur */
+.dropzone-host .dz-preview .dz-success-mark,
+.dropzone-host .dz-preview .dz-error-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dropzone-host .dz-preview.dz-success .dz-success-mark {
+  background: var(--primary);
+  color: #fff;
+  opacity: 1;
+}
+
+.dropzone-host .dz-preview.dz-error .dz-error-mark {
+  background: var(--danger);
+  color: #fff;
+  opacity: 1;
+}
+
+.dropzone-host .dz-preview .dz-error-message {
+  display: none !important;
+}
+
+/* ── Fin vignettes Dropzone ───────────────────────────────────── */
 
 .richtext-content p {
   margin: 0 0 8px;

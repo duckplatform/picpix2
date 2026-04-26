@@ -15,11 +15,57 @@
 
   <div class="upload-mobile-actions">
     <a class="btn btn-secondary" href="/event/<%= eventItem.token %>">Retour a l'evenement</a>
+    <button type="button" id="camera-open-btn" class="btn btn-camera">
+      📷 Appareil photo
+    </button>
   </div>
 
+  <p class="upload-hint">
+    Utilisez le bouton <strong>Appareil photo</strong> pour une session multi-prises avec votre
+    camera, ou touchez la zone Dropzone ci-dessous pour ouvrir la galerie / camera native.
+  </p>
+
   <div id="upload-feedback" class="flash-stack"></div>
-  <div id="uppy-dashboard" class="uppy-host"></div>
+  <div id="dropzone-uploader" class="dropzone-host"></div>
 </section>
+
+<!-- ═══════════════════════ Modal Caméra ═══════════════════════ -->
+<div id="camera-modal" class="camera-modal" hidden aria-hidden="true" role="dialog"
+     aria-modal="true" aria-label="Appareil photo">
+  <div class="camera-modal-inner">
+
+    <div class="camera-toolbar">
+      <button type="button" id="camera-switch-btn" class="btn btn-small camera-btn-icon"
+              title="Retourner la caméra" aria-label="Retourner la caméra">↩ Retourner</button>
+      <span id="camera-counter" class="camera-counter">Aucune photo</span>
+      <button type="button" id="camera-cancel-btn" class="btn btn-danger btn-small"
+              aria-label="Fermer la caméra">Annuler</button>
+    </div>
+
+    <div class="camera-viewfinder">
+      <video id="camera-video" autoplay muted playsinline></video>
+    </div>
+
+    <p id="camera-error" class="camera-error" style="display:none;" role="alert"></p>
+
+    <div class="camera-actions">
+      <button type="button" id="camera-capture-btn" class="btn camera-shutter"
+              aria-label="Prendre une photo">●</button>
+    </div>
+
+    <div id="camera-thumbnails" class="camera-thumbnails" aria-live="polite"></div>
+
+    <div class="camera-footer">
+      <button type="button" id="camera-validate-btn" class="btn" disabled>
+        Valider et envoyer (0)
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Canvas caché utilisé pour la capture (pas affiché) -->
+<canvas id="camera-canvas" style="display:none;" aria-hidden="true"></canvas>
 
 <section class="card table-card section-gap">
   <div>

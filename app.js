@@ -17,6 +17,7 @@ const flash          = require('connect-flash');
 const methodOverride = require('method-override');
 const { csrfSync }   = require('csrf-sync');
 const { Server }     = require('socket.io');
+const eventStore     = require('./services/eventStore');
 
 const logger             = require('./config/logger');
 const { testConnection } = require('./config/database');
@@ -78,7 +79,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: ENV === 'production' ? '1d' : 0,
 }));
 
-app.use('/vendor/uppy', express.static(path.join(__dirname, 'node_modules', 'uppy', 'dist'), {
+app.use('/vendor/dropzone', express.static(path.join(__dirname, 'node_modules', 'dropzone', 'dist'), {
   maxAge: ENV === 'production' ? '1d' : 0,
 }));
 
@@ -283,6 +284,10 @@ async function startServer() {
   try {
     await listenAsync();
     void refreshDatabaseState();
+    // Crée les dossiers de stockage manquants pour les événements pré-existants
+    void eventStore.ensureAllStorageDirectories().catch((err) => {
+      logger.warn('[SERVER] ensureAllStorageDirectories :', err.message);
+    });
   } catch (err) {
     logger.error(`[SERVER] Impossible de demarrer : ${err.message}`);
     process.exit(1);
