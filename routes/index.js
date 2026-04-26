@@ -474,6 +474,23 @@ function renderEventNotFound(res) {
   });
 }
 
+function renderProfileEventCreateForm(req, res, payload = {}, status = 200) {
+  return renderView(res, 'profile-event-create', {
+    title: 'Creer un evenement',
+    pageClass: 'page-profile',
+    formData: {
+      status: 'inactive',
+      theme: eventThemes.DEFAULT_EVENT_THEME,
+      slideshowTransition: eventTransitions.DEFAULT_EVENT_TRANSITION,
+      uploadSourceMode: 'default',
+      uploadAllowMultiple: true,
+      moderationEnabled: false,
+      ...payload.formData,
+    },
+    ...payload,
+  }, status);
+}
+
 function renderProfileEventForm(req, res, eventItem, payload = {}, status = 200) {
   return renderView(res, 'profile-event-form', {
     title: 'Modifier evenement',
@@ -999,6 +1016,10 @@ router.get('/profile', requireAuth, async (req, res, next) => {
   }
 });
 
+router.get('/profile/events/new', requireAuth, (req, res) => {
+  return renderProfileEventCreateForm(req, res);
+});
+
 router.put('/profile', requireAuth, profileValidators, async (req, res, next) => {
   const result = validationResult(req);
   if (!result.isEmpty()) {
@@ -1037,17 +1058,13 @@ router.put('/profile', requireAuth, profileValidators, async (req, res, next) =>
 router.post('/profile/events', requireAuth, eventValidators, async (req, res, next) => {
   const result = validationResult(req);
   if (!result.isEmpty()) {
-    try {
-      return await renderProfile(req, res, {
-        formData: normalizeEventFormData({
-          fullName: req.currentUser.fullName,
-          ...req.body,
-        }),
-        fieldErrors: collectFieldErrors(result),
-      }, 422);
-    } catch (err) {
-      return next(err);
-    }
+    return renderProfileEventCreateForm(req, res, {
+      formData: normalizeEventFormData({
+        fullName: req.currentUser.fullName,
+        ...req.body,
+      }),
+      fieldErrors: collectFieldErrors(result),
+    }, 422);
   }
 
   try {
