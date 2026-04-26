@@ -14,11 +14,11 @@ LOG_FILE="/tmp/app.log"
 WORKSPACE="/workspace"
 DB_HOST="${DB_HOST:-mysql}"
 DB_PORT="${DB_PORT:-3306}"
-DB_USER="${DB_USER:-lanparty}"
-DB_PASSWORD="${DB_PASSWORD:-lanparty_dev}"
+DB_USER="${DB_USER:-picpix}"
+DB_PASSWORD="${DB_PASSWORD:-picpix_dev}"
 
 # ── Vérification que MySQL est accessible ──────────────────
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Démarrage de LANPartyManager..." > "${LOG_FILE}"
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Démarrage ..." > "${LOG_FILE}"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Vérification de MySQL..." >> "${LOG_FILE}"
 
 # Attendre max 30 secondes
@@ -28,7 +28,7 @@ until MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -P "${DB_PORT}" \
   ATTEMPTS=$((ATTEMPTS + 1))
   if [ "${ATTEMPTS}" -ge 30 ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ MySQL non accessible — impossible de démarrer l'app" >> "${LOG_FILE}"
-    echo "❌ MySQL non accessible —impossible de démarrer LANPartyManager"
+    echo "❌ MySQL non accessible —impossible de démarrer l'app"
     exit 1
   fi
   sleep 1
@@ -45,5 +45,5 @@ cd "${WORKSPACE}"
 node app.js >> "${LOG_FILE}" 2>&1 &
 APP_PID=$!
 
-echo "✅ LANPartyManager démarré (PID ${APP_PID})"
+echo "✅ Application démarrée (PID ${APP_PID})"
 echo "   Logs : tail -f ${LOG_FILE}"

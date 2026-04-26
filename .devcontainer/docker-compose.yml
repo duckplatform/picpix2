@@ -1,0 +1,80 @@
+# ============================================================
+# Docker Compose pour GitHub Codespace
+# ============================================================
+# Deux services :
+#   app   — Conteneur de développement Node.js 20 (LTS)
+#   mysql — MySQL 8.0 avec persistance des données
+#
+# ⚠️  Ces identifiants sont UNIQUEMENT destinés au développement
+#     local / Codespace. Ne jamais utiliser en production.
+# ============================================================
+
+version: '3.8'
+
+services:
+
+  # ── Conteneur de développement principal ────────────────────
+  app:
+    # Build depuis le Dockerfile local qui installe le client MySQL
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Monte le dépôt dans /workspace (cache activé pour les perfs)
+      - ..:/workspace:cached
+    # Maintient le conteneur vivant ; la commande réelle est gérée
+    # par postCreateCommand / postStartCommand dans devcontainer.json
+    command: sleep infinity
+    environment:
+      # ── Connexion MySQL ──────────────────────────────────────
+      DB_HOST:     mysql
+      DB_USER:     picpix
+      DB_PASSWORD: picpix_dev
+      DB_NAME:     picpix
+      DB_PORT:     "3306"
+      # ── Application ─────────────────────────────────────────
+      NODE_ENV:        development
+      PORT:            "3000"
+      SESSION_SECRET:  "codespace-session-secret-not-for-production"
+      LOG_LEVEL:       debug
+    # Attend que MySQL soit prêt (healthcheck) avant de démarrer
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # Réseau partagé avec MySQL
+    networks:
+      - lanparty-net
+
+  # ── Base de données MySQL 8.0 ────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev_password
+      MYSQL_DATABASE:      picpix
+      MYSQL_USER:          picpix
+      MYSQL_PASSWORD:      picpix_dev
+    ports:
+      # Exposé sur localhost uniquement (privé) pour accès depuis VS Code MySQL Client
+      - "127.0.0.1:3306:3306"
+    volumes:
+      # Persistance des données entre les redémarrages du Codespace
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Vérifie que le serveur MySQL répond avant que l'app démarre
+      # MYSQL_PWD évite d'exposer le mot de passe dans la liste des processus
+      test: ["CMD-SHELL", "MYSQL_PWD=root_dev_password mysqladmin ping -h localhost -u root"]
+      interval: 5s
+      timeout:  5s
+      retries:  12
+      start_period: 20s
+    networks:
+      - lanparty-net
+
+# ── Réseau interne ────────────────────────────────────────────
+networks:
+  lanparty-net:
+    driver: bridge
+
+# ── Volume nommé pour la persistance MySQL ────────────────────
+volumes:
+  mysql-data:

@@ -15,9 +15,9 @@ set -euo pipefail
 
 DB_HOST="${DB_HOST:-mysql}"
 DB_PORT="${DB_PORT:-3306}"
-DB_USER="${DB_USER:-lanparty}"
-DB_PASSWORD="${DB_PASSWORD:-lanparty_dev}"
-DB_NAME="${DB_NAME:-lanpartymanager}"
+DB_USER="${DB_USER:-picpix}"
+DB_PASSWORD="${DB_PASSWORD:-picpix_dev}"
+DB_NAME="${DB_NAME:-picpix}"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
