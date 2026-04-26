@@ -1,8 +1,7 @@
 'use strict';
 
 /**
- * LANPartyManager - Application principale
- * Site web pour association de jeux vidéo
+ * Application principale
  *
  * Stack : Node.js + Express + MySQL + EJS
  * Déploiement : VPS cPanel (variables d'environnement définies dans cPanel)
@@ -155,14 +154,7 @@ app.use((req, res, next) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────
 
-app.use('/',          require('./routes/index'));
-app.use('/auth',      require('./routes/auth'));
-app.use('/events',    require('./routes/events'));
-app.use('/profile',   require('./routes/profile'));
-app.use('/admin',     require('./routes/admin'));
-app.use('/moderator', require('./routes/moderator'));
-app.use('/news',      require('./routes/news'));
-app.use('/battles',   require('./routes/battles'));
+
 
 // ─── Page 404 ─────────────────────────────────────────────────────────────
 
