@@ -1,0 +1,50 @@
+{
+  "name": "picpix2",
+  "version": "1.0.0",
+  "description": "Site de recolte/projection de photo lors d'evenement",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "NODE_ENV=test mocha tests/**/*.test.js --timeout 10000 --exit",
+    "db:reset": "bash .devcontainer/reset-db.sh"
+  },
+  "keywords": [
+    "photo",
+    "event",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
+  "author": "Ducplatform",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-flash": "^0.1.1",
+    "csrf-sync": "^4.2.1",
+    "ejs": "^3.1.10",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-session": "^1.17.3",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "marked": "^18.0.2",
+    "method-override": "^3.0.0",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.6.5",
+    "qrcode": "^1.5.4",
+    "sanitize-html": "^2.17.3",
+    "socket.io": "^4.8.3",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "chai": "^4.3.10",
+    "mocha": "^11.7.5",
+    "nodemon": "^3.0.2",
+    "sinon": "^17.0.1",
+    "supertest": "^6.3.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
