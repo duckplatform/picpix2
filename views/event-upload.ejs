@@ -14,6 +14,7 @@
 
   <div class="upload-mobile-actions">
     <a class="btn btn-secondary" href="/event/<%= eventItem.token %>">Retour a l'evenement</a>
+    <a class="btn btn-secondary" href="/event/<%= eventItem.token %>/gallery">Voir la galerie</a>
     <button type="button" id="camera-open-btn" class="btn btn-camera">
       📷 Appareil photo
     </button>
@@ -65,36 +66,4 @@
 
 <!-- Canvas caché utilisé pour la capture (pas affiché) -->
 <canvas id="camera-canvas" style="display:none;" aria-hidden="true"></canvas>
-
-<section class="card table-card section-gap">
-  <div>
-    <p class="eyebrow">Historique</p>
-    <h2>Fichiers recents</h2>
-  </div>
-
-  <% if (!uploadedFiles.length) { %>
-    <p>Aucun fichier envoye pour le moment.</p>
-  <% } else { %>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Nom original</th>
-            <th>Taille</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody id="uploaded-files-table-body">
-          <% uploadedFiles.forEach((fileItem) => { %>
-            <tr>
-              <td><%= fileItem.originalName %></td>
-              <td><%= Math.round(fileItem.sizeBytes / 1024) %> Ko</td>
-              <td><%= new Date(fileItem.createdAt).toLocaleString('fr-FR') %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  <% } %>
-</section>
 <%- include('partials/footer') %>

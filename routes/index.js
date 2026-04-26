@@ -14,6 +14,7 @@ const { body, param, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const eventFileStore = require('../services/eventFileStore');
+const imageVariantService = require('../services/imageVariantService');
 const userStore = require('../services/userStore');
 const eventStore = require('../services/eventStore');
 
@@ -131,6 +132,7 @@ function buildEventSiteNav(token, guestName, eventName) {
     guestName: (guestName || 'Visiteur').trim().slice(0, 120),
     eventName: (eventName || 'Evenement').trim().slice(0, 120),
     eventUrl: `/event/${token}`,
+    galleryUrl: `/event/${token}/gallery`,
     uploadUrl: `/event/${token}/upload`,
   };
 }
@@ -186,7 +188,7 @@ function createEventUploadMiddleware(maxFiles = 10) {
   const storage = multer.diskStorage({
     async destination(req, file, callback) {
       try {
-        const dir = eventStore.getEventStoragePath(req.eventItem.uuid);
+        const dir = eventStore.getEventOriginalStoragePath(req.eventItem.uuid);
         await fs.mkdir(dir, { recursive: true });
         callback(null, dir);
       } catch (err) {
@@ -468,7 +470,6 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
       return res.redirect(`/event/${req.params.token}/register`);
     }
 
-    const uploadedFiles = await eventFileStore.listByEvent(eventItem.id);
     return renderView(res, 'event-upload', {
       title: `${eventItem.name} - Upload photos`,
       pageClass: 'page-event',
@@ -481,12 +482,121 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
       },
       headCssPaths: ['/vendor/dropzone/dropzone.css'],
       footerScriptPaths: ['/vendor/dropzone/dropzone-min.js', '/event-upload.js', '/camera.js'],
-      uploadedFiles,
     });
   } catch (err) {
     return next(err);
   }
 });
+
+router.get('/event/:token/gallery', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    const eventItem = await loadEventByTokenOr404(req, res);
+    if (!eventItem) {
+      return undefined;
+    }
+
+    const guestName = getEventGuestName(req, req.params.token);
+    if (!guestName) {
+      return res.redirect(`/event/${req.params.token}/register`);
+    }
+
+    const uploadedFiles = await eventFileStore.listByEvent(eventItem.id);
+    const galleryFiles = await Promise.all(uploadedFiles.map(async (fileItem) => {
+      const hasXl = await imageVariantService.variantExists(eventItem.uuid, fileItem.storedName, 'xl');
+      const hasMd = await imageVariantService.variantExists(eventItem.uuid, fileItem.storedName, 'md');
+      const hasSm = await imageVariantService.variantExists(eventItem.uuid, fileItem.storedName, 'sm');
+
+      return {
+        ...fileItem,
+        isProcessed: hasSm || hasMd || hasXl,
+        urls: {
+          original: `/event/${req.params.token}/media/${fileItem.storedName}/original`,
+          xl: hasXl ? `/event/${req.params.token}/media/${fileItem.storedName}/xl` : null,
+          md: hasMd ? `/event/${req.params.token}/media/${fileItem.storedName}/md` : null,
+          sm: hasSm ? `/event/${req.params.token}/media/${fileItem.storedName}/sm` : null,
+        },
+      };
+    }));
+
+    return renderView(res, 'event-gallery', {
+      title: `${eventItem.name} - Galerie`,
+      pageClass: 'page-event',
+      eventItem,
+      guestName,
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
+      galleryFiles,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get(
+  '/event/:token/media/:storedName/:variant(original|xl|md|sm)',
+  [
+    param('token').trim().matches(/^[A-Za-z0-9]{10}$/),
+    param('storedName').trim().matches(/^[0-9a-f-]{36}\.[a-z0-9]{1,10}$/i),
+  ],
+  async (req, res, next) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    try {
+      const eventItem = await eventStore.findByToken(req.params.token);
+      if (!eventItem) {
+        return res.status(404).render('errors/404', {
+          title: 'Evenement introuvable',
+          pageClass: 'page-error',
+        });
+      }
+
+      const guestName = getEventGuestName(req, req.params.token);
+      if (!guestName) {
+        return res.status(403).render('errors/500', {
+          title: 'Acces refuse',
+          pageClass: 'page-error',
+          statusCode: 403,
+          message: 'Inscription visiteur requise.',
+        });
+      }
+
+      const variant = req.params.variant;
+      const storedName = req.params.storedName;
+
+      const filePath = variant === 'original'
+        ? imageVariantService.getOriginalPath(eventItem.uuid, storedName)
+        : imageVariantService.getVariantPath(eventItem.uuid, storedName, variant);
+
+      return res.sendFile(filePath, (sendErr) => {
+        if (!sendErr) {
+          return;
+        }
+
+        if (sendErr.code === 'ENOENT') {
+          res.status(404).end();
+          return;
+        }
+
+        next(sendErr);
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
 
 router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
   const result = validationResult(req);
@@ -550,10 +660,11 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
             originalName: file.originalname,
             storedName: file.filename,
             sizeBytes: file.size,
-            storagePath: path.posix.join('events', eventItem.uuid, file.filename),
+            storagePath: path.posix.join('events', eventItem.uuid, 'original', file.filename),
             checksumSha256,
           });
 
+          imageVariantService.enqueueVariantGeneration(eventItem.uuid, file.filename);
           createdFiles.push(record);
         }
 

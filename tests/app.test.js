@@ -209,15 +209,48 @@ describe('Tests applicatifs HTTP', () => {
       expect(uploadResponse.body.files[0].originalName).to.equal('photo-souvenir.jpg');
       expect(uploadResponse.body.files[0].storedName).to.match(/^[0-9a-f-]{36}\.jpg$/i);
       expect(uploadResponse.body.files[0].storedName).to.not.equal('photo-souvenir.jpg');
-      expect(uploadResponse.body.files[0].storagePath).to.equal(`events/${createdEvent.uuid}/${uploadResponse.body.files[0].storedName}`);
+      expect(uploadResponse.body.files[0].storagePath).to.equal(`events/${createdEvent.uuid}/original/${uploadResponse.body.files[0].storedName}`);
       expect(uploadResponse.body.files[0].checksumSha256).to.match(/^[0-9a-f]{64}$/i);
 
       const eventFiles = await eventFileStore.listByEvent(createdEvent.id);
       expect(eventFiles).to.have.lengthOf(1);
       expect(eventFiles[0].originalName).to.equal('photo-souvenir.jpg');
 
-      const storedFilePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid, eventFiles[0].storedName);
+      const storedFilePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid, 'original', eventFiles[0].storedName);
       expect(await pathExists(storedFilePath)).to.equal(true);
+    });
+
+    it('GET /event/:token/gallery affiche les photos avec route media securisee', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Galerie Invite',
+        description: 'Consultation des photos depuis une galerie dediee.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Visiteur Galerie');
+
+      const uploadPage = await agent.get(`/event/${createdEvent.token}/upload`);
+      const uploadCsrfToken = extractCsrfToken(uploadPage.text);
+
+      const uploadResponse = await agent
+        .post(`/event/${createdEvent.token}/upload`)
+        .set('x-csrf-token', uploadCsrfToken)
+        .attach('photos', Buffer.from('fake image payload'), {
+          filename: 'photo-galerie.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(uploadResponse.status).to.equal(201);
+      const storedName = uploadResponse.body.files[0].storedName;
+
+      const galleryPage = await agent.get(`/event/${createdEvent.token}/gallery`);
+      expect(galleryPage.status).to.equal(200);
+      expect(galleryPage.text).to.include('Galerie evenement');
+      expect(galleryPage.text).to.include(`/event/${createdEvent.token}/media/${storedName}/original`);
     });
 
     it('POST /event/:token/upload accepte aussi le format de champs photos[index] emis par Dropzone en multi-upload', async () => {

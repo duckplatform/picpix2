@@ -11,7 +11,6 @@
   const sourceModeInput = document.getElementById('upload-source-mode');
   const allowMultipleInput = document.getElementById('upload-allow-multiple');
   const feedback = document.getElementById('upload-feedback');
-  const uploadedFilesTableBody = document.getElementById('uploaded-files-table-body');
   const sourceMode = sourceModeInput ? sourceModeInput.value : 'default';
   const allowMultiple = !allowMultipleInput || allowMultipleInput.value === '1';
   const isCameraOnly = sourceMode === 'camera_only';
@@ -32,21 +31,6 @@
 
   function renderMessage(message, type) {
     feedback.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-  }
-
-  function appendUploadedFileRow(fileItem) {
-    if (!uploadedFilesTableBody) {
-      return;
-    }
-
-    const row = document.createElement('tr');
-    const createdAt = new Date(fileItem.createdAt).toLocaleString('fr-FR');
-    row.innerHTML = `
-      <td>${fileItem.originalName}</td>
-      <td>${Math.round(fileItem.sizeBytes / 1024)} Ko</td>
-      <td>${createdAt}</td>
-    `;
-    uploadedFilesTableBody.insertBefore(row, uploadedFilesTableBody.firstChild);
   }
 
   const dropzone = new window.Dropzone(dropzoneHost, {
@@ -93,10 +77,6 @@
   });
 
   dropzone.on('success', function onSuccess(file, response) {
-    if (response && Array.isArray(response.files)) {
-      response.files.forEach(appendUploadedFileRow);
-    }
-
     renderMessage((response && response.message) || `Photo televersee : ${file.name}`, 'success');
   });
 

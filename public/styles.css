@@ -751,6 +751,51 @@ textarea:focus {
 
 /* ── Fin vignettes Dropzone ───────────────────────────────────── */
 
+.event-gallery-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.event-gallery-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  overflow: hidden;
+}
+
+.event-gallery-card a {
+  display: block;
+  aspect-ratio: 1 / 1;
+  background: #e7efe9;
+}
+
+.event-gallery-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.event-gallery-meta {
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+}
+
+.event-gallery-meta strong {
+  font-size: 0.83rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-gallery-meta small {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
 .richtext-content p {
   margin: 0 0 8px;
 }

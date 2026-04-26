@@ -30,8 +30,17 @@ function eventStoragePath(eventUuid) {
   return path.join(EVENT_STORAGE_ROOT, eventUuid);
 }
 
+function eventOriginalStoragePath(eventUuid) {
+  return path.join(eventStoragePath(eventUuid), 'original');
+}
+
+function eventDerivedStoragePath(eventUuid) {
+  return path.join(eventStoragePath(eventUuid), 'derived');
+}
+
 async function ensureEventStorageDirectory(eventUuid) {
-  await fs.mkdir(eventStoragePath(eventUuid), { recursive: true });
+  await fs.mkdir(eventOriginalStoragePath(eventUuid), { recursive: true });
+  await fs.mkdir(eventDerivedStoragePath(eventUuid), { recursive: true });
 }
 
 async function removeEventStorageDirectory(eventUuid) {
@@ -397,7 +406,10 @@ async function ensureAllStorageDirectories() {
   }
 
   await Promise.all(
-    rows.map((row) => fs.mkdir(eventStoragePath(row.uuid), { recursive: true })),
+    rows.flatMap((row) => ([
+      fs.mkdir(eventOriginalStoragePath(row.uuid), { recursive: true }),
+      fs.mkdir(eventDerivedStoragePath(row.uuid), { recursive: true }),
+    ])),
   );
 }
 
@@ -408,6 +420,8 @@ module.exports = {
   findById,
   findByToken,
   generateUniqueToken,
+  getEventDerivedStoragePath: eventDerivedStoragePath,
+  getEventOriginalStoragePath: eventOriginalStoragePath,
   getEventStoragePath: eventStoragePath,
   listAll,
   listByOwner,
