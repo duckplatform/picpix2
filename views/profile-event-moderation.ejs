@@ -38,16 +38,24 @@
             <small>En attente d'approbation</small>
             <small>Par <%= fileItem.uploaderName || 'Visiteur' %> · <%= new Date(fileItem.createdAt).toLocaleString('fr-FR') %></small>
           </div>
-          <div class="table-actions">
+          <div class="table-actions moderation-actions">
             <form method="post" action="/profile/event/<%= editingEvent.id %>/moderation/<%= fileItem.id %>" class="inline-form js-moderation-action-form" data-file-id="<%= fileItem.id %>">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <input type="hidden" name="moderationStatus" value="approved" />
-              <button class="btn btn-small" type="submit">Approuver</button>
+              <button class="moderation-icon-btn moderation-icon-btn-approve" type="submit" title="Approuver la photo" aria-label="Approuver la photo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M9.55 18.2 3.9 12.56l1.42-1.42 4.23 4.24 9.13-9.14 1.42 1.42z" />
+                </svg>
+              </button>
             </form>
             <form method="post" action="/profile/event/<%= editingEvent.id %>/moderation/<%= fileItem.id %>" class="inline-form js-moderation-action-form" data-file-id="<%= fileItem.id %>">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
               <input type="hidden" name="moderationStatus" value="rejected" />
-              <button class="btn btn-danger btn-small" type="submit">Rejeter</button>
+              <button class="moderation-icon-btn moderation-icon-btn-reject" type="submit" title="Rejeter la photo" aria-label="Rejeter la photo">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="m18.3 7.11-1.41-1.41L12 10.59 7.11 5.7 5.7 7.11 10.59 12 5.7 16.89l1.41 1.41L12 13.41l4.89 4.89 1.41-1.41L13.41 12z" />
+                </svg>
+              </button>
             </form>
           </div>
       </article>

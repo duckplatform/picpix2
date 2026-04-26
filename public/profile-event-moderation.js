@@ -18,6 +18,18 @@
     return;
   }
 
+  // 🔑 Stocker le token CSRF initial en variable globale (pas juste dans le DOM)
+  let currentCsrfToken = '';
+  
+  // Extraire le token du premier formulaire au démarrage
+  const initialForm = grid.querySelector('.js-moderation-action-form');
+  if (initialForm) {
+    const csrfInput = initialForm.querySelector('input[name="_csrf"]');
+    if (csrfInput && csrfInput.value) {
+      currentCsrfToken = csrfInput.value;
+    }
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replace(/&/g, '&amp;')
@@ -75,12 +87,21 @@
     syncEmptyState();
   }
 
-  function buildActionForm(actionUrl, fileId, csrfToken, moderationStatus, label, isDanger) {
+  function buildActionForm(actionUrl, fileId, csrfToken, moderationStatus) {
+    const isReject = moderationStatus === 'rejected';
+    const iconPath = isReject
+      ? 'm18.3 7.11-1.41-1.41L12 10.59 7.11 5.7 5.7 7.11 10.59 12 5.7 16.89l1.41 1.41L12 13.41l4.89 4.89 1.41-1.41L13.41 12z'
+      : 'M9.55 18.2 3.9 12.56l1.42-1.42 4.23 4.24 9.13-9.14 1.42 1.42z';
+    const label = isReject ? 'Rejeter la photo' : 'Approuver la photo';
+    const buttonClass = isReject ? 'moderation-icon-btn moderation-icon-btn-reject' : 'moderation-icon-btn moderation-icon-btn-approve';
+
     return ''
       + '<form method="post" action="' + escapeHtml(actionUrl) + '" class="inline-form js-moderation-action-form" data-file-id="' + String(fileId) + '">'
       + '<input type="hidden" name="_csrf" value="' + escapeHtml(csrfToken) + '" />'
       + '<input type="hidden" name="moderationStatus" value="' + escapeHtml(moderationStatus) + '" />'
-      + '<button class="btn ' + (isDanger ? 'btn-danger ' : '') + 'btn-small" type="submit">' + escapeHtml(label) + '</button>'
+      + '<button class="' + buttonClass + '" type="submit" title="' + escapeHtml(label) + '" aria-label="' + escapeHtml(label) + '">'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + iconPath + '" /></svg>'
+      + '</button>'
       + '</form>';
   }
 
@@ -91,9 +112,8 @@
     const originalUrl = (payload.urls && payload.urls.original)
       || ('/profile/events/' + String(eventId) + '/photos/' + String(payload.storedName) + '/original');
 
-    const firstForm = grid.querySelector('.js-moderation-action-form');
-    const csrfInput = firstForm ? firstForm.querySelector('input[name="_csrf"]') : null;
-    const csrfToken = csrfInput ? csrfInput.value : '';
+    // 🔑 Utiliser le token GLOBAL persistant, pas un token cherché dans le DOM
+    const csrfToken = currentCsrfToken;
 
     const article = document.createElement('article');
     article.className = 'event-gallery-card';
@@ -111,9 +131,9 @@
       + '<small>En attente d\'approbation</small>'
       + '<small>Par ' + escapeHtml(uploaderName) + ' · ' + escapeHtml(formatDate(payload.uploadedAt)) + '</small>'
       + '</div>'
-      + '<div class="table-actions">'
-      + buildActionForm(actionUrlBase, payload.fileId, csrfToken, 'approved', 'Approuver', false)
-      + buildActionForm(actionUrlBase, payload.fileId, csrfToken, 'rejected', 'Rejeter', true)
+      + '<div class="table-actions moderation-actions">'
+      + buildActionForm(actionUrlBase, payload.fileId, csrfToken, 'approved')
+      + buildActionForm(actionUrlBase, payload.fileId, csrfToken, 'rejected')
       + '</div>';
 
     const imageEl = article.querySelector('img');
@@ -148,15 +168,41 @@
   }
 
   function submitActionForm(form) {
-    const formData = new FormData(form);
-
-    return fetch(form.action, {
-      method: 'POST',
+    // 1️⃣ Récupérer un token CSRF FRAIS avant de soumettre
+    return fetch('/profile/event/' + String(eventId) + '/moderation/csrf-token', {
+      method: 'GET',
       headers: {
-        Accept: 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json',
       },
-      body: formData,
+    }).then(function onTokenResponse(response) {
+      if (!response.ok) {
+        // Fallback: utiliser le token courant même s'il pourrait être expiré
+        console.warn('[Moderation] Impossible de rafraîchir le token CSRF, utilisation du token courant');
+        return { csrfToken: currentCsrfToken };
+      }
+
+      return response.json();
+    }).then(function onTokenData(tokenData) {
+      // 2️⃣ Mettre à jour le token GLOBAL ET dans le formulaire
+      if (tokenData.csrfToken) {
+        currentCsrfToken = tokenData.csrfToken;
+        const csrfInput = form.querySelector('input[name="_csrf"]');
+        if (csrfInput) {
+          csrfInput.value = tokenData.csrfToken;
+        }
+      }
+
+      // 3️⃣ Soumettre le formulaire avec le token frais
+      const formData = new FormData(form);
+
+      return fetch(form.action, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: formData,
+      });
     }).then(function onResponse(response) {
       if (!response.ok) {
         throw new Error('La moderation a echoue.');
@@ -166,8 +212,9 @@
     }).then(function onJson(payload) {
       removeCard({ fileId: form.getAttribute('data-file-id') });
       return payload;
-    }).catch(function onError() {
+    }).catch(function onError(error) {
       // Fallback robuste: submit HTML classique si la requête AJAX échoue.
+      console.warn('[Moderation] AJAX fallback:', error.message);
       form.submit();
     });
   }

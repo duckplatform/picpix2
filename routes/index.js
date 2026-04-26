@@ -1152,6 +1152,44 @@ router.get('/profile/events/:id/slideshow', requireAuth, param('id').isInt({ min
   }
 });
 
+/**
+ * API GET /profile/event/:id/moderation/csrf-token
+ * ⚠️ ROUTE PLUS SPÉCIFIQUE - DOIT ÊTRE AVANT /profile/event/:id/moderation
+ * Retourne un token CSRF frais pour les requêtes AJAX
+ */
+router.get(
+  '/profile/event/:id/moderation/csrf-token',
+  requireAuth,
+  param('id').isInt({ min: 1 }),
+  async (req, res, next) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      return res.status(400).json({ error: 'ID d\'événement invalide' });
+    }
+
+    try {
+      const eventId = Number(req.params.id);
+      const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+      if (!editingEvent) {
+        return res.status(404).json({ error: 'Événement non trouvé' });
+      }
+
+      // Générer un token CSRF frais
+      const csrfToken = typeof req.csrfToken === 'function' ? req.csrfToken() : '';
+
+      logger.debug(`[CSRF-API] Token frais généré pour event ${eventId}`);
+
+      return res.json({
+        csrfToken: csrfToken,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      logger.error(`[CSRF-API] Erreur GET token: ${err.message}`);
+      return res.status(500).json({ error: 'Erreur serveur' });
+    }
+  }
+);
+
 router.get('/profile/event/:id/moderation', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
   const result = validationResult(req);
   if (!result.isEmpty()) {
