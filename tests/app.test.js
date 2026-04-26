@@ -219,6 +219,50 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].description).to.equal('Festival culturel et musical du printemps.');
     });
 
+    it('sanitise la description markdown lors de la creation d\'evenement', async () => {
+      const agent = request.agent(app);
+      const registerPage = await agent.get('/register');
+      const registerCsrf = extractCsrfToken(registerPage.text);
+
+      await agent
+        .post('/register')
+        .type('form')
+        .send({
+          _csrf: registerCsrf,
+          fullName: 'Rich Text User',
+          email: 'richtext@example.com',
+          password: 'SecurePass123',
+          confirmPassword: 'SecurePass123',
+        })
+        .expect(302);
+
+      const profilePage = await agent.get('/profile');
+      const profileCsrf = extractCsrfToken(profilePage.text);
+
+      await agent
+        .post('/profile/events')
+        .type('form')
+        .send({
+          _csrf: profileCsrf,
+          name: 'Session Rich Text',
+          description: 'Bienvenue **public**\n\n<script>alert("x")</script>',
+          startsAt: '2026-08-20T19:30',
+          status: 'inactive',
+        })
+        .expect(302);
+
+      const owner = await userStore.findByEmail('richtext@example.com');
+      const events = await eventStore.listByOwner(owner.id);
+      expect(events).to.have.lengthOf(1);
+      expect(events[0].description).to.include('**public**');
+      expect(events[0].description).to.not.include('<script>');
+
+      const eventPage = await request(app).get(`/event/${events[0].token}`);
+      expect(eventPage.status).to.equal(200);
+      expect(eventPage.text).to.include('<strong>public</strong>');
+      expect(eventPage.text).to.not.include('alert("x")');
+    });
+
     it('permet a un utilisateur d\'activer, modifier, regenerer le token et supprimer son evenement', async () => {
       const agent = request.agent(app);
       const registerPage = await agent.get('/register');

@@ -3,6 +3,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
+const { marked } = require('marked');
 const { body, param, validationResult } = require('express-validator');
 
 const logger = require('../config/logger');
@@ -19,6 +21,45 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: 'Trop de tentatives, veuillez reessayer plus tard.',
 });
+
+const EVENT_DESCRIPTION_RENDER_POLICY = {
+  allowedTags: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'a', 'blockquote', 'h1', 'h2', 'h3', 'code', 'pre'],
+  allowedAttributes: {
+    a: ['href', 'target', 'rel'],
+  },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  disallowedTagsMode: 'discard',
+  transformTags: {
+    a: sanitizeHtml.simpleTransform('a', {
+      target: '_blank',
+      rel: 'noopener noreferrer nofollow',
+    }),
+  },
+};
+
+function stripHtmlToText(value) {
+  return sanitizeHtml(value || '', {
+    allowedTags: [],
+    allowedAttributes: {},
+  }).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeEventDescriptionMarkdown(value) {
+  return sanitizeHtml(value || '', {
+    allowedTags: [],
+    allowedAttributes: {},
+  }).trim();
+}
+
+function renderEventDescriptionMarkdown(value) {
+  const markdownValue = value || '';
+  const html = marked.parse(markdownValue, {
+    breaks: true,
+    gfm: true,
+  });
+
+  return sanitizeHtml(html, EVENT_DESCRIPTION_RENDER_POLICY).trim();
+}
 
 function renderView(res, view, payload = {}, status = 200) {
   return res.status(status).render(view, {
@@ -122,8 +163,14 @@ const eventValidators = [
     .trim()
     .isLength({ min: 3, max: 180 }).withMessage('Le nom de l\'evenement doit contenir entre 3 et 180 caracteres.'),
   body('description')
-    .trim()
-    .isLength({ min: 10, max: 5000 }).withMessage('La description doit contenir entre 10 et 5000 caracteres.'),
+    .custom((value) => {
+      const plainText = stripHtmlToText(value);
+      if (plainText.length < 10 || plainText.length > 5000) {
+        throw new Error('La description doit contenir entre 10 et 5000 caracteres utiles.');
+      }
+
+      return true;
+    }),
   body('startsAt')
     .trim()
     .notEmpty().withMessage('La date/heure de l\'evenement est requise.')
@@ -236,6 +283,7 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
       title: eventItem.name,
       pageClass: 'page-event',
       eventItem,
+      renderedDescriptionHtml: renderEventDescriptionMarkdown(eventItem.description),
       nowIso: new Date().toISOString(),
       eventStartsAtIso: hasValidStartDate ? startsAtDate.toISOString() : null,
       shouldShowCountdown,
@@ -401,7 +449,7 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
     await eventStore.createEvent({
       ownerUserId: req.currentUser.id,
       name: req.body.name,
-      description: req.body.description,
+      description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
     });
@@ -460,7 +508,7 @@ router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), ev
 
     await eventStore.updateEvent(eventId, {
       name: req.body.name,
-      description: req.body.description,
+      description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
     });
@@ -600,7 +648,7 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
     await eventStore.createEvent({
       ownerUserId: Number(req.body.ownerUserId),
       name: req.body.name,
-      description: req.body.description,
+      description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
     });
@@ -673,7 +721,7 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
     const updated = await eventStore.updateEvent(eventId, {
       ownerUserId: Number(req.body.ownerUserId),
       name: req.body.name,
-      description: req.body.description,
+      description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
     });
