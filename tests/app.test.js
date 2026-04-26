@@ -159,6 +159,27 @@ describe('Tests applicatifs HTTP', () => {
       expect(res.headers.location).to.equal(`/event/${createdEvent.token}/register`);
     });
 
+    it('GET /event/:token/upload applique les options d\'upload configurees sur l\'evenement', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Capture terrain',
+        description: 'Photos terrain depuis smartphone.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+        uploadSourceMode: 'camera_only',
+        uploadAllowMultiple: false,
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Mobile User');
+
+      const uploadPage = await agent.get(`/event/${createdEvent.token}/upload`);
+      expect(uploadPage.status).to.equal(200);
+      expect(uploadPage.text).to.include('id="upload-source-mode" value="camera_only"');
+      expect(uploadPage.text).to.include('id="upload-allow-multiple" value="0"');
+    });
+
     it('POST /event/:token/upload stocke une photo avec nom physique UUID et metadata en base', async () => {
       const owner = await userStore.findByEmail('admin@example.com');
       const createdEvent = await eventStore.createEvent({
@@ -197,6 +218,39 @@ describe('Tests applicatifs HTTP', () => {
 
       const storedFilePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid, eventFiles[0].storedName);
       expect(await pathExists(storedFilePath)).to.equal(true);
+    });
+
+    it('POST /event/:token/upload refuse plusieurs fichiers si l\'evenement desactive les uploads multiples', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Portrait minute',
+        description: 'Une photo par envoi uniquement.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+        uploadAllowMultiple: false,
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Solo Shooter');
+
+      const uploadPage = await agent.get(`/event/${createdEvent.token}/upload`);
+      const uploadCsrfToken = extractCsrfToken(uploadPage.text);
+
+      const uploadResponse = await agent
+        .post(`/event/${createdEvent.token}/upload`)
+        .set('x-csrf-token', uploadCsrfToken)
+        .attach('photos', Buffer.from('fake image payload 1'), {
+          filename: 'photo-1.jpg',
+          contentType: 'image/jpeg',
+        })
+        .attach('photos', Buffer.from('fake image payload 2'), {
+          filename: 'photo-2.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(uploadResponse.status).to.equal(413);
+      expect(uploadResponse.body.message).to.include('Trop de fichiers');
     });
 
     it('GET /event/:token retourne 404 si le token est inconnu', async () => {
@@ -319,6 +373,7 @@ describe('Tests applicatifs HTTP', () => {
           description: 'Festival culturel et musical du printemps.',
           startsAt: '2026-05-01T19:30',
           status: 'active',
+          uploadSourceMode: 'library_only',
         });
 
       expect(createEventResponse.status).to.equal(302);
@@ -335,6 +390,8 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].token).to.match(/^[A-Za-z0-9]{10}$/);
       expect(events[0].status).to.equal('active');
       expect(events[0].description).to.equal('Festival culturel et musical du printemps.');
+      expect(events[0].uploadSourceMode).to.equal('library_only');
+      expect(events[0].uploadAllowMultiple).to.equal(false);
 
       const eventStoragePath = path.join(EVENT_STORAGE_ROOT, events[0].uuid);
       expect(await pathExists(eventStoragePath)).to.equal(true);
@@ -450,6 +507,8 @@ describe('Tests applicatifs HTTP', () => {
           description: 'Atelier photo avance avec session pratique.',
           startsAt: '2026-07-02T15:30',
           status: 'inactive',
+          uploadSourceMode: 'camera_only',
+          uploadAllowMultiple: '1',
         })
         .expect(302);
 
@@ -457,6 +516,8 @@ describe('Tests applicatifs HTTP', () => {
       expect(updatedEvent.name).to.equal('Atelier Photo Pro');
       expect(updatedEvent.description).to.equal('Atelier photo avance avec session pratique.');
       expect(updatedEvent.status).to.equal('inactive');
+      expect(updatedEvent.uploadSourceMode).to.equal('camera_only');
+      expect(updatedEvent.uploadAllowMultiple).to.equal(true);
 
       const tokenPage = await agent.get(`/profile/events/${createdEvent.id}/edit`);
       const tokenCsrf = extractCsrfToken(tokenPage.text);
@@ -605,6 +666,8 @@ describe('Tests applicatifs HTTP', () => {
           description: 'Soiree privee pour les administrateurs.',
           startsAt: '2026-06-10T20:00',
           status: 'inactive',
+          uploadSourceMode: 'camera_only',
+          uploadAllowMultiple: '1',
         });
 
       expect(createResponse.status).to.equal(302);
@@ -615,6 +678,8 @@ describe('Tests applicatifs HTTP', () => {
       const createdEvent = eventsAfterCreate[0];
       expect(createdEvent.name).to.equal('Soiree Admin');
       expect(createdEvent.description).to.equal('Soiree privee pour les administrateurs.');
+      expect(createdEvent.uploadSourceMode).to.equal('camera_only');
+      expect(createdEvent.uploadAllowMultiple).to.equal(true);
 
       const eventStoragePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid);
       expect(await pathExists(eventStoragePath)).to.equal(true);
@@ -632,6 +697,7 @@ describe('Tests applicatifs HTTP', () => {
           description: 'Version VIP avec acces reserve.',
           startsAt: '2026-06-10T21:00',
           status: 'active',
+          uploadSourceMode: 'library_only',
         });
 
       expect(updateResponse.status).to.equal(302);
@@ -640,6 +706,10 @@ describe('Tests applicatifs HTTP', () => {
       const adminPage = await agent.get('/admin');
       expect(adminPage.status).to.equal(200);
       expect(adminPage.text).to.include('Soiree Admin VIP');
+
+      const updatedEvent = await eventStore.findById(createdEvent.id);
+      expect(updatedEvent.uploadSourceMode).to.equal('library_only');
+      expect(updatedEvent.uploadAllowMultiple).to.equal(false);
 
       const beforeRegen = await eventStore.findById(createdEvent.id);
       const regenPage = await agent.get(`/admin/events/${createdEvent.id}/edit`);

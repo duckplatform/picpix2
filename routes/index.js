@@ -19,6 +19,7 @@ const eventStore = require('../services/eventStore');
 
 const router = express.Router();
 const MAX_EVENT_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const EVENT_UPLOAD_SOURCE_MODES = ['default', 'camera_only', 'library_only'];
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -124,6 +125,26 @@ function getEventGuestName(req, token) {
   return value ? value.trim() : '';
 }
 
+function parseUploadAllowMultiple(value) {
+  return value === true || value === 'true' || value === '1' || value === 'on';
+}
+
+function normalizeEventFormData(formData = {}, fallback = {}) {
+  const uploadSourceMode = EVENT_UPLOAD_SOURCE_MODES.includes(formData.uploadSourceMode)
+    ? formData.uploadSourceMode
+    : (fallback.uploadSourceMode || 'default');
+
+  const uploadAllowMultiple = formData.uploadAllowMultiple !== undefined
+    ? parseUploadAllowMultiple(formData.uploadAllowMultiple)
+    : (fallback.uploadAllowMultiple !== undefined ? Boolean(fallback.uploadAllowMultiple) : true);
+
+  return {
+    ...formData,
+    uploadSourceMode,
+    uploadAllowMultiple,
+  };
+}
+
 function sanitizeFileExtension(originalName) {
   const extension = path.extname(originalName || '').toLowerCase();
   if (!extension || !/^\.[a-z0-9]{1,10}$/.test(extension)) {
@@ -151,7 +172,7 @@ async function loadEventByTokenOr404(req, res) {
   return eventItem;
 }
 
-function createEventUploadMiddleware() {
+function createEventUploadMiddleware(maxFiles = 10) {
   const storage = multer.diskStorage({
     destination(req, file, callback) {
       callback(null, eventStore.getEventStoragePath(req.eventItem.uuid));
@@ -166,7 +187,7 @@ function createEventUploadMiddleware() {
     storage,
     limits: {
       fileSize: MAX_EVENT_UPLOAD_SIZE_BYTES,
-      files: 10,
+      files: maxFiles,
     },
     fileFilter(req, file, callback) {
       if (!file.mimetype || !file.mimetype.startsWith('image/')) {
@@ -176,10 +197,8 @@ function createEventUploadMiddleware() {
 
       callback(null, true);
     },
-  }).array('photos', 10);
+  }).array('photos', maxFiles);
 }
-
-const eventUploadMiddleware = createEventUploadMiddleware();
 
 function passwordRules(fieldName = 'password', required = true) {
   const chain = body(fieldName)
@@ -271,6 +290,13 @@ const eventValidators = [
   body('status')
     .trim()
     .isIn(['active', 'inactive']).withMessage('Statut evenement invalide.'),
+  body('uploadSourceMode')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isIn(EVENT_UPLOAD_SOURCE_MODES).withMessage('Mode d\'upload invalide.'),
+  body('uploadAllowMultiple')
+    .optional({ values: 'falsy' })
+    .isIn(['1', 'true', 'on']).withMessage('Option d\'upload multiple invalide.'),
 ];
 
 const adminEventValidators = [
@@ -317,6 +343,8 @@ async function renderProfile(req, res, payload = {}, status = 200) {
     formData: {
       fullName: req.currentUser.fullName,
       eventStatus: 'inactive',
+      uploadSourceMode: 'default',
+      uploadAllowMultiple: true,
       ...payload.formData,
     },
     ...payload,
@@ -340,6 +368,8 @@ function renderProfileEventForm(req, res, eventItem, payload = {}, status = 200)
       description: eventItem.description,
       startsAt: toDateTimeLocal(eventItem.startsAt),
       status: eventItem.status,
+      uploadSourceMode: eventItem.uploadSourceMode,
+      uploadAllowMultiple: eventItem.uploadAllowMultiple,
       ...payload.formData,
     },
     ...payload,
@@ -421,6 +451,10 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
       pageClass: 'page-event',
       eventItem,
       guestName,
+      uploadOptions: {
+        sourceMode: eventItem.uploadSourceMode,
+        allowMultiple: eventItem.uploadAllowMultiple,
+      },
       headCssPaths: ['/vendor/uppy/uppy.min.css'],
       footerScriptPaths: ['/vendor/uppy/uppy.min.js', '/event-upload.js'],
       uploadedFiles,
@@ -448,6 +482,8 @@ router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{
     if (!guestName) {
       return res.status(403).json({ message: 'Inscription visiteur requise avant upload.' });
     }
+
+    const eventUploadMiddleware = createEventUploadMiddleware(eventItem.uploadAllowMultiple ? 10 : 1);
 
     return eventUploadMiddleware(req, res, async (uploadErr) => {
       if (uploadErr) {
@@ -709,10 +745,10 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
   if (!result.isEmpty()) {
     try {
       return await renderProfile(req, res, {
-        formData: {
+        formData: normalizeEventFormData({
           fullName: req.currentUser.fullName,
           ...req.body,
-        },
+        }),
         fieldErrors: collectFieldErrors(result),
       }, 422);
     } catch (err) {
@@ -727,6 +763,8 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      uploadSourceMode: req.body.uploadSourceMode,
+      uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
 
     logger.info(`[EVENT] ${req.currentUser.email} a cree l'evenement ${req.body.name}`);
@@ -767,7 +805,7 @@ router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), ev
       }
 
       return renderProfileEventForm(req, res, editingEvent, {
-        formData: req.body,
+        formData: normalizeEventFormData(req.body, editingEvent),
         fieldErrors: collectFieldErrors(result),
       }, 422);
     } catch (err) {
@@ -786,6 +824,8 @@ router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), ev
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      uploadSourceMode: req.body.uploadSourceMode,
+      uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
 
     logger.info(`[EVENT] ${req.currentUser.email} a mis a jour son evenement ${editingEvent.uuid}`);
@@ -893,7 +933,11 @@ router.get('/admin/events/new', requireAdmin, async (req, res, next) => {
       mode: 'create',
       users,
       editingEvent: null,
-      formData: { status: 'inactive' },
+      formData: {
+        status: 'inactive',
+        uploadSourceMode: 'default',
+        uploadAllowMultiple: true,
+      },
     });
   } catch (err) {
     return next(err);
@@ -911,7 +955,7 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
         mode: 'create',
         users,
         editingEvent: null,
-        formData: req.body,
+        formData: normalizeEventFormData(req.body),
         fieldErrors: collectFieldErrors(result),
       }, 422);
     } catch (err) {
@@ -926,6 +970,8 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      uploadSourceMode: req.body.uploadSourceMode,
+      uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
 
     logger.info(`[ADMIN] ${req.currentUser.email} a cree un evenement (${req.body.name})`);
@@ -961,10 +1007,10 @@ router.get('/admin/events/:id/edit', requireAdmin, param('id').isInt({ min: 1 })
       mode: 'edit',
       users,
       editingEvent,
-      formData: {
+      formData: normalizeEventFormData({
         ...editingEvent,
         startsAt: new Date(editingEvent.startsAt).toISOString().slice(0, 16),
-      },
+      }, editingEvent),
     });
   } catch (err) {
     return next(err);
@@ -984,7 +1030,7 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
         mode: 'edit',
         users,
         editingEvent,
-        formData: { ...req.body, id: eventId },
+        formData: normalizeEventFormData({ ...req.body, id: eventId }, editingEvent || {}),
         fieldErrors: collectFieldErrors(result),
       }, 422);
     } catch (err) {
@@ -999,6 +1045,8 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      uploadSourceMode: req.body.uploadSourceMode,
+      uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
 
     if (!updated) {

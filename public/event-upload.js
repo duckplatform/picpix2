@@ -6,8 +6,27 @@
 
   const csrfInput = document.getElementById('upload-csrf');
   const endpointInput = document.getElementById('upload-endpoint');
+  const sourceModeInput = document.getElementById('upload-source-mode');
+  const allowMultipleInput = document.getElementById('upload-allow-multiple');
   const feedback = document.getElementById('upload-feedback');
   const uploadedFilesTableBody = document.getElementById('uploaded-files-table-body');
+  const sourceMode = sourceModeInput ? sourceModeInput.value : 'default';
+  const allowMultiple = !allowMultipleInput || allowMultipleInput.value === '1';
+  const isCameraOnly = sourceMode === 'camera_only';
+  const isLibraryOnly = sourceMode === 'library_only';
+
+  let dashboardNote = 'Images uniquement, 10 Mo max par fichier.';
+  if (isCameraOnly) {
+    dashboardNote += ' Mode camera uniquement.';
+  } else if (isLibraryOnly) {
+    dashboardNote += ' Mode phototheque uniquement.';
+  } else {
+    dashboardNote += ' Compatible galerie + prise de vue mobile.';
+  }
+
+  dashboardNote += allowMultiple
+    ? ' Plusieurs photos a la suite sont autorisees.'
+    : ' Une seule photo a la fois est autorisee.';
 
   function renderMessage(message, type) {
     feedback.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
@@ -30,10 +49,10 @@
 
   const uppy = new window.Uppy.Uppy({
     autoProceed: false,
-    allowMultipleUploadBatches: true,
+    allowMultipleUploadBatches: allowMultiple,
     restrictions: {
       maxFileSize: 10 * 1024 * 1024,
-      maxNumberOfFiles: 10,
+      maxNumberOfFiles: allowMultiple ? 10 : 1,
       allowedFileTypes: ['image/*'],
     },
   });
@@ -43,24 +62,27 @@
     target: '#uppy-dashboard',
     proudlyDisplayPoweredByUppy: false,
     showProgressDetails: true,
-    note: 'Images uniquement, 10 Mo max par fichier. Compatible galerie + prise de vue mobile.',
+    note: dashboardNote,
     hideRetryButton: false,
     hidePauseResumeButton: true,
     doneButtonHandler: null,
     width: '100%',
     height: 460,
+    disableLocalFiles: isCameraOnly,
   });
 
-  uppy.use(window.Uppy.Webcam, {
-    target: window.Uppy.Dashboard,
-    modes: ['picture'],
-    mirror: false,
-    showRecordingLength: false,
-    showVideoSourceDropdown: true,
-    videoConstraints: {
-      facingMode: 'environment',
-    },
-  });
+  if (!isLibraryOnly) {
+    uppy.use(window.Uppy.Webcam, {
+      target: window.Uppy.Dashboard,
+      modes: ['picture'],
+      mirror: false,
+      showRecordingLength: false,
+      showVideoSourceDropdown: true,
+      videoConstraints: {
+        facingMode: 'environment',
+      },
+    });
+  }
 
   uppy.use(window.Uppy.XHRUpload, {
     endpoint: endpointInput.value,

@@ -53,6 +53,10 @@ function normalizeRow(row) {
     description: row.description || '',
     startsAt: row.startsAt || row.starts_at,
     status: row.status,
+    uploadSourceMode: row.uploadSourceMode || row.upload_source_mode || 'default',
+    uploadAllowMultiple: row.uploadAllowMultiple !== undefined
+      ? Boolean(row.uploadAllowMultiple)
+      : (row.upload_allow_multiple !== undefined ? Boolean(row.upload_allow_multiple) : true),
     token: row.token,
     createdAt: row.createdAt || row.created_at,
     updatedAt: row.updatedAt || row.updated_at,
@@ -94,7 +98,10 @@ async function listByOwner(ownerUserId) {
 
   const [rows] = await pool.query(`
     SELECT id, uuid, owner_user_id AS ownerUserId, name, description,
-           starts_at AS startsAt, status, token,
+        starts_at AS startsAt, status,
+        upload_source_mode AS uploadSourceMode,
+        upload_allow_multiple AS uploadAllowMultiple,
+        token,
            created_at AS createdAt, updated_at AS updatedAt
     FROM events
     WHERE owner_user_id = ?
@@ -123,7 +130,10 @@ async function listAll() {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
+        e.name, e.description, e.starts_at AS startsAt, e.status,
+        e.upload_source_mode AS uploadSourceMode,
+        e.upload_allow_multiple AS uploadAllowMultiple,
+        e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -151,7 +161,10 @@ async function findById(eventId) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
+        e.name, e.description, e.starts_at AS startsAt, e.status,
+        e.upload_source_mode AS uploadSourceMode,
+        e.upload_allow_multiple AS uploadAllowMultiple,
+        e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -180,7 +193,10 @@ async function findByToken(token) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
+        e.name, e.description, e.starts_at AS startsAt, e.status,
+        e.upload_source_mode AS uploadSourceMode,
+        e.upload_allow_multiple AS uploadAllowMultiple,
+        e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -191,7 +207,16 @@ async function findByToken(token) {
   return normalizeRow(rows[0]);
 }
 
-async function createEvent({ ownerUserId, name, description = '', startsAt, status = 'inactive', token }) {
+async function createEvent({
+  ownerUserId,
+  name,
+  description = '',
+  startsAt,
+  status = 'inactive',
+  uploadSourceMode = 'default',
+  uploadAllowMultiple = true,
+  token,
+}) {
   const eventToken = token || await generateUniqueToken();
   const eventUuid = crypto.randomUUID();
 
@@ -214,6 +239,8 @@ async function createEvent({ ownerUserId, name, description = '', startsAt, stat
       description,
       startsAt,
       status,
+      uploadSourceMode,
+      uploadAllowMultiple: Boolean(uploadAllowMultiple),
       token: eventToken,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -226,9 +253,12 @@ async function createEvent({ ownerUserId, name, description = '', startsAt, stat
 
   try {
     const [result] = await pool.query(`
-      INSERT INTO events (uuid, owner_user_id, name, description, starts_at, status, token)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [eventUuid, ownerUserId, name, description, startsAt, status, eventToken]);
+      INSERT INTO events (
+        uuid, owner_user_id, name, description, starts_at, status,
+        upload_source_mode, upload_allow_multiple, token
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [eventUuid, ownerUserId, name, description, startsAt, status, uploadSourceMode, uploadAllowMultiple ? 1 : 0, eventToken]);
 
     return findById(result.insertId);
   } catch (err) {
@@ -256,6 +286,10 @@ async function updateEvent(eventId, payload) {
     description: payload.description !== undefined ? payload.description : current.description,
     startsAt: payload.startsAt || current.startsAt,
     status: payload.status || current.status,
+    uploadSourceMode: payload.uploadSourceMode || current.uploadSourceMode,
+    uploadAllowMultiple: payload.uploadAllowMultiple !== undefined
+      ? Boolean(payload.uploadAllowMultiple)
+      : current.uploadAllowMultiple,
     token: payload.token || current.token,
   };
 
@@ -286,9 +320,20 @@ async function updateEvent(eventId, payload) {
   try {
     await pool.query(`
       UPDATE events
-      SET owner_user_id = ?, name = ?, description = ?, starts_at = ?, status = ?, token = ?, updated_at = CURRENT_TIMESTAMP
+      SET owner_user_id = ?, name = ?, description = ?, starts_at = ?, status = ?,
+          upload_source_mode = ?, upload_allow_multiple = ?, token = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [nextData.ownerUserId, nextData.name, nextData.description, nextData.startsAt, nextData.status, nextData.token, current.id]);
+    `, [
+      nextData.ownerUserId,
+      nextData.name,
+      nextData.description,
+      nextData.startsAt,
+      nextData.status,
+      nextData.uploadSourceMode,
+      nextData.uploadAllowMultiple ? 1 : 0,
+      nextData.token,
+      current.id,
+    ]);
 
     return findById(current.id);
   } catch (err) {

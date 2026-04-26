@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS events (
 	description TEXT NOT NULL,
 	starts_at DATETIME NOT NULL,
 	status ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
+	upload_source_mode ENUM('default', 'camera_only', 'library_only') NOT NULL DEFAULT 'default',
+	upload_allow_multiple TINYINT(1) NOT NULL DEFAULT 1,
 	token CHAR(10) NOT NULL,
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

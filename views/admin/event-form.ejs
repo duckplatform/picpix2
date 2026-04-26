@@ -66,6 +66,24 @@
       <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
     </label>
 
+    <label>
+      <span>Source des photos</span>
+      <select name="uploadSourceMode" required>
+        <option value="default" <%= (formData.uploadSourceMode || 'default') === 'default' ? 'selected' : '' %>>Defaut</option>
+        <option value="camera_only" <%= formData.uploadSourceMode === 'camera_only' ? 'selected' : '' %>>Camera uniquement</option>
+        <option value="library_only" <%= formData.uploadSourceMode === 'library_only' ? 'selected' : '' %>>Phototheque uniquement</option>
+      </select>
+      <% if (fieldErrors.uploadSourceMode) { %><small class="field-error"><%= fieldErrors.uploadSourceMode %></small><% } %>
+    </label>
+
+    <label>
+      <span class="checkbox-label">
+        <input type="checkbox" name="uploadAllowMultiple" value="1" <%= formData.uploadAllowMultiple !== false ? 'checked' : '' %> />
+        Autoriser plusieurs photos d'affilee
+      </span>
+      <% if (fieldErrors.uploadAllowMultiple) { %><small class="field-error"><%= fieldErrors.uploadAllowMultiple %></small><% } %>
+    </label>
+
     <button class="btn" type="submit"><%= mode === 'create' ? 'Creer evenement' : 'Mettre a jour evenement' %></button>
   </form>
 </section>

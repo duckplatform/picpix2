@@ -10,6 +10,8 @@
 
   <input type="hidden" id="upload-csrf" name="_csrf" value="<%= csrfToken %>" />
   <input type="hidden" id="upload-endpoint" value="/event/<%= eventItem.token %>/upload" />
+  <input type="hidden" id="upload-source-mode" value="<%= uploadOptions.sourceMode %>" />
+  <input type="hidden" id="upload-allow-multiple" value="<%= uploadOptions.allowMultiple ? '1' : '0' %>" />
 
   <div class="upload-mobile-actions">
     <a class="btn btn-secondary" href="/event/<%= eventItem.token %>">Retour a l'evenement</a>
