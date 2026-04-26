@@ -44,6 +44,29 @@ describe('Tests applicatifs HTTP', () => {
       expect(res.status).to.equal(404);
       expect(res.text).to.include('La page demandee est introuvable');
     });
+
+    it('GET /event/:token affiche la page evenement si le token existe', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Concert Public',
+        startsAt: '2026-09-20T20:00',
+        status: 'active',
+      });
+
+      const res = await request(app).get(`/event/${createdEvent.token}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.text).to.include('Concert Public');
+      expect(res.text).to.include(createdEvent.token);
+    });
+
+    it('GET /event/:token retourne 404 si le token est inconnu', async () => {
+      const res = await request(app).get('/event/AAAAAAAAAA');
+
+      expect(res.status).to.equal(404);
+      expect(res.text).to.include('La page demandee est introuvable');
+    });
   });
 
   describe('Monitoring', () => {

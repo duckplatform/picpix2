@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="hero">
+  <p class="eyebrow">Page evenement</p>
+  <h1><%= eventItem.name %></h1>
+  <p>Token public: <strong><%= eventItem.token %></strong></p>
+  <% if (eventItem.startsAt) { %>
+    <p>Debut: <%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></p>
+  <% } %>
+</section>
+<%- include('partials/footer') %>

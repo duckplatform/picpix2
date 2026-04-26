@@ -163,6 +163,34 @@ router.get('/', (req, res) => {
   });
 });
 
+router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    const eventItem = await eventStore.findByToken(req.params.token);
+    if (!eventItem) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    return renderView(res, 'event', {
+      title: eventItem.name,
+      pageClass: 'page-event',
+      eventItem,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get('/register', ensureGuest, (req, res) => renderView(res, 'auth/register', {
   title: 'Inscription',
   pageClass: 'page-auth',

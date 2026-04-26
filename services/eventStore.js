@@ -146,6 +146,35 @@ async function findById(eventId) {
   return normalizeRow(rows[0]);
 }
 
+async function findByToken(token) {
+  if (useTestStore()) {
+    const found = testEvents.find((eventItem) => eventItem.token === token);
+    if (!found) {
+      return null;
+    }
+
+    const owner = await userStore.findPublicById(found.ownerUserId);
+    return normalizeRow({
+      ...found,
+      ownerEmail: owner ? owner.email : null,
+      ownerFullName: owner ? owner.fullName : null,
+    });
+  }
+
+  const [rows] = await pool.query(`
+    SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
+           u.email AS ownerEmail, u.full_name AS ownerFullName,
+           e.name, e.starts_at AS startsAt, e.status, e.token,
+           e.created_at AS createdAt, e.updated_at AS updatedAt
+    FROM events e
+    INNER JOIN users u ON u.id = e.owner_user_id
+    WHERE e.token = ?
+    LIMIT 1
+  `, [token]);
+
+  return normalizeRow(rows[0]);
+}
+
 async function createEvent({ ownerUserId, name, startsAt, status = 'inactive', token }) {
   const eventToken = token || await generateUniqueToken();
   const eventUuid = crypto.randomUUID();
@@ -270,6 +299,7 @@ module.exports = {
   createEvent,
   deleteEvent,
   findById,
+  findByToken,
   generateUniqueToken,
   listAll,
   listByOwner,
