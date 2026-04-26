@@ -48,4 +48,45 @@
     <button class="btn" type="submit"><%= mode === 'create' ? 'Creer le compte' : 'Enregistrer les modifications' %></button>
   </form>
 </section>
+
+<% if (mode === 'edit') { %>
+  <section class="card table-card section-gap">
+    <div>
+      <p class="eyebrow">Evenements utilisateur</p>
+      <h2>Evenements de <%= editingUser.fullName %></h2>
+    </div>
+
+    <% if (!userEvents || !userEvents.length) { %>
+      <p>Aucun evenement pour cet utilisateur.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Date/heure</th>
+              <th>Statut</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% userEvents.forEach((eventItem) => { %>
+              <tr>
+                <td><%= eventItem.name %></td>
+                <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
+                <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
+                <td>
+                  <div class="table-actions">
+                    <a class="btn btn-secondary btn-small" href="/admin/events/<%= eventItem.id %>/edit">Admin</a>
+                    <a class="btn btn-small" href="/event/<%= eventItem.token %>" target="_blank" rel="noopener noreferrer">Site</a>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
 <%- include('../partials/footer') %>

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "NODE_ENV=test mocha tests/**/*.test.js --timeout 10000 --exit",
+    "test": "NODE_ENV=test EVENT_STORAGE_ROOT=storage-test/events mocha tests/**/*.test.js --timeout 10000 --exit",
     "db:reset": "bash .devcontainer/reset-db.sh"
   },
   "keywords": [

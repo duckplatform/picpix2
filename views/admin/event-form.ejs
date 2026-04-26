@@ -87,4 +87,52 @@
     <button class="btn" type="submit"><%= mode === 'create' ? 'Creer evenement' : 'Mettre a jour evenement' %></button>
   </form>
 </section>
+
+<% if (mode === 'edit') { %>
+  <section class="card table-card section-gap">
+    <div>
+      <p class="eyebrow">Photos evenement</p>
+      <h2>Apercu des fichiers</h2>
+    </div>
+
+    <% if (!eventFiles || !eventFiles.length) { %>
+      <p>Aucun fichier photo pour cet evenement.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Apercu</th>
+              <th>Nom original</th>
+              <th>Taille</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% eventFiles.forEach((fileItem) => { %>
+              <tr>
+                <td>
+                  <img
+                    class="admin-photo-thumb"
+                    src="/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/sm"
+                    alt="<%= fileItem.originalName %>"
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src='/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/original';"
+                  />
+                </td>
+                <td><%= fileItem.originalName %></td>
+                <td><%= Math.round(fileItem.sizeBytes / 1024) %> Ko</td>
+                <td><%= new Date(fileItem.createdAt).toLocaleString('fr-FR') %></td>
+                <td>
+                  <a class="btn btn-secondary btn-small" href="/admin/events/<%= editingEvent.id %>/photos/<%= fileItem.storedName %>/original" target="_blank" rel="noopener noreferrer">Ouvrir</a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+<% } %>
 <%- include('../partials/footer') %>

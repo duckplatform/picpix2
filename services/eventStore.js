@@ -8,7 +8,18 @@ const { pool } = require('../config/database');
 const userStore = require('./userStore');
 
 const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-const EVENT_STORAGE_ROOT = path.join(__dirname, '..', 'storage', 'events');
+const EVENT_STORAGE_ROOT = (() => {
+  const configuredRoot = process.env.EVENT_STORAGE_ROOT;
+  if (!configuredRoot) {
+    return path.join(__dirname, '..', 'storage', 'events');
+  }
+
+  if (path.isAbsolute(configuredRoot)) {
+    return configuredRoot;
+  }
+
+  return path.join(__dirname, '..', configuredRoot);
+})();
 
 let testEvents = [];
 let nextTestEventId = 1;
@@ -419,6 +430,7 @@ module.exports = {
   ensureAllStorageDirectories,
   findById,
   findByToken,
+  getEventStorageRoot: () => EVENT_STORAGE_ROOT,
   generateUniqueToken,
   getEventDerivedStoragePath: eventDerivedStoragePath,
   getEventOriginalStoragePath: eventOriginalStoragePath,

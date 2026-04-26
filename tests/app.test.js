@@ -10,7 +10,7 @@ const eventFileStore = require('../services/eventFileStore');
 const userStore = require('../services/userStore');
 const eventStore = require('../services/eventStore');
 
-const EVENT_STORAGE_ROOT = path.join(__dirname, '..', 'storage', 'events');
+const EVENT_STORAGE_ROOT = eventStore.getEventStorageRoot();
 
 async function pathExists(targetPath) {
   try {
@@ -462,6 +462,10 @@ describe('Tests applicatifs HTTP', () => {
 
       const eventStoragePath = path.join(EVENT_STORAGE_ROOT, events[0].uuid);
       expect(await pathExists(eventStoragePath)).to.equal(true);
+
+      const ownerGallery = await agent.get(`/profile/events/${events[0].id}/gallery`);
+      expect(ownerGallery.status).to.equal(200);
+      expect(ownerGallery.text).to.include('Galerie proprietaire');
     });
 
     it('sanitise la description markdown lors de la creation d\'evenement', async () => {

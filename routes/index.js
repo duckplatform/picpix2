@@ -941,6 +941,92 @@ router.get('/profile/events/:id/edit', requireAuth, param('id').isInt({ min: 1 }
   }
 });
 
+router.get('/profile/events/:id/gallery', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    const uploadedFiles = await eventFileStore.listByEvent(editingEvent.id);
+    const galleryFiles = await Promise.all(uploadedFiles.map(async (fileItem) => {
+      const hasXl = await imageVariantService.variantExists(editingEvent.uuid, fileItem.storedName, 'xl');
+      const hasMd = await imageVariantService.variantExists(editingEvent.uuid, fileItem.storedName, 'md');
+      const hasSm = await imageVariantService.variantExists(editingEvent.uuid, fileItem.storedName, 'sm');
+
+      return {
+        ...fileItem,
+        isProcessed: hasSm || hasMd || hasXl,
+        urls: {
+          original: `/profile/events/${editingEvent.id}/photos/${fileItem.storedName}/original`,
+          xl: hasXl ? `/profile/events/${editingEvent.id}/photos/${fileItem.storedName}/xl` : null,
+          md: hasMd ? `/profile/events/${editingEvent.id}/photos/${fileItem.storedName}/md` : null,
+          sm: hasSm ? `/profile/events/${editingEvent.id}/photos/${fileItem.storedName}/sm` : null,
+        },
+      };
+    }));
+
+    return renderView(res, 'profile-event-gallery', {
+      title: `Galerie - ${editingEvent.name}`,
+      pageClass: 'page-profile',
+      editingEvent,
+      galleryFiles,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get(
+  '/profile/events/:id/photos/:storedName/:variant(original|xl|md|sm)',
+  [
+    requireAuth,
+    param('id').isInt({ min: 1 }),
+    param('storedName').trim().matches(/^[0-9a-f-]{36}\.[a-z0-9]{1,10}$/i),
+  ],
+  async (req, res, next) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      return renderEventNotFound(res);
+    }
+
+    try {
+      const eventId = Number(req.params.id);
+      const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+      if (!editingEvent) {
+        return renderEventNotFound(res);
+      }
+
+      const variant = req.params.variant;
+      const storedName = req.params.storedName;
+      const filePath = variant === 'original'
+        ? imageVariantService.getOriginalPath(editingEvent.uuid, storedName)
+        : imageVariantService.getVariantPath(editingEvent.uuid, storedName, variant);
+
+      return res.sendFile(filePath, (sendErr) => {
+        if (!sendErr) {
+          return;
+        }
+
+        if (sendErr.code === 'ENOENT') {
+          res.status(404).end();
+          return;
+        }
+
+        next(sendErr);
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
 router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), eventValidators, async (req, res, next) => {
   const eventId = Number(req.params.id);
   const result = validationResult(req);
@@ -1079,6 +1165,7 @@ router.get('/admin/events/new', requireAdmin, async (req, res, next) => {
       pageClass: 'page-admin',
       mode: 'create',
       users,
+      eventFiles: [],
       editingEvent: null,
       formData: {
         status: 'inactive',
@@ -1101,6 +1188,7 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
         pageClass: 'page-admin',
         mode: 'create',
         users,
+        eventFiles: [],
         editingEvent: null,
         formData: normalizeEventFormData(req.body),
         fieldErrors: collectFieldErrors(result),
@@ -1148,11 +1236,13 @@ router.get('/admin/events/:id/edit', requireAdmin, param('id').isInt({ min: 1 })
     }
 
     const users = await userStore.listUsers();
+    const eventFiles = await eventFileStore.listByEvent(editingEvent.id);
     return renderView(res, 'admin/event-form', {
       title: 'Modifier evenement',
       pageClass: 'page-admin',
       mode: 'edit',
       users,
+      eventFiles,
       editingEvent,
       formData: normalizeEventFormData({
         ...editingEvent,
@@ -1171,11 +1261,13 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
     try {
       const users = await userStore.listUsers();
       const editingEvent = await eventStore.findById(eventId);
+      const eventFiles = editingEvent ? await eventFileStore.listByEvent(editingEvent.id) : [];
       return renderView(res, 'admin/event-form', {
         title: 'Modifier evenement',
         pageClass: 'page-admin',
         mode: 'edit',
         users,
+        eventFiles,
         editingEvent,
         formData: normalizeEventFormData({ ...req.body, id: eventId }, editingEvent || {}),
         fieldErrors: collectFieldErrors(result),
@@ -1258,6 +1350,7 @@ router.get('/admin/users/new', requireAdmin, (req, res) => renderView(res, 'admi
   title: 'Nouvel utilisateur',
   pageClass: 'page-admin',
   mode: 'create',
+  userEvents: [],
   formData: { role: 'user', status: 'active' },
   editingUser: null,
 }));
@@ -1274,6 +1367,7 @@ router.post('/admin/users', requireAdmin, adminUserValidators, async (req, res, 
       title: 'Nouvel utilisateur',
       pageClass: 'page-admin',
       mode: 'create',
+      userEvents: [],
       editingUser: null,
       formData: req.body,
       fieldErrors,
@@ -1298,6 +1392,7 @@ router.post('/admin/users', requireAdmin, adminUserValidators, async (req, res, 
         title: 'Nouvel utilisateur',
         pageClass: 'page-admin',
         mode: 'create',
+        userEvents: [],
         editingUser: null,
         formData: req.body,
         fieldErrors: { email: 'Cette adresse email est deja utilisee.' },
@@ -1326,11 +1421,14 @@ router.get('/admin/users/:id/edit', requireAdmin, param('id').isInt({ min: 1 }),
       });
     }
 
+    const userEvents = await eventStore.listByOwner(editingUser.id);
+
     return renderView(res, 'admin/user-form', {
       title: 'Modifier un utilisateur',
       pageClass: 'page-admin',
       mode: 'edit',
       editingUser,
+      userEvents,
       formData: editingUser,
     });
   } catch (err) {
@@ -1343,11 +1441,13 @@ router.put('/admin/users/:id', requireAdmin, param('id').isInt({ min: 1 }), admi
   const userId = Number(req.params.id);
   if (!result.isEmpty()) {
     const editingUser = await userStore.findPublicById(userId);
+    const userEvents = editingUser ? await eventStore.listByOwner(editingUser.id) : [];
     return renderView(res, 'admin/user-form', {
       title: 'Modifier un utilisateur',
       pageClass: 'page-admin',
       mode: 'edit',
       editingUser,
+      userEvents,
       formData: { ...req.body, id: userId },
       fieldErrors: collectFieldErrors(result),
     }, 422);
@@ -1394,11 +1494,13 @@ router.put('/admin/users/:id', requireAdmin, param('id').isInt({ min: 1 }), admi
   } catch (err) {
     if (err.code === 'EMAIL_ALREADY_EXISTS') {
       const editingUser = await userStore.findPublicById(userId);
+      const userEvents = editingUser ? await eventStore.listByOwner(editingUser.id) : [];
       return renderView(res, 'admin/user-form', {
         title: 'Modifier un utilisateur',
         pageClass: 'page-admin',
         mode: 'edit',
         editingUser,
+        userEvents,
         formData: { ...req.body, id: userId },
         fieldErrors: { email: 'Cette adresse email est deja utilisee.' },
       }, 409);
@@ -1447,5 +1549,54 @@ router.delete('/admin/users/:id', requireAdmin, param('id').isInt({ min: 1 }), a
     return next(err);
   }
 });
+
+router.get(
+  '/admin/events/:id/photos/:storedName/:variant(original|xl|md|sm)',
+  [
+    requireAdmin,
+    param('id').isInt({ min: 1 }),
+    param('storedName').trim().matches(/^[0-9a-f-]{36}\.[a-z0-9]{1,10}$/i),
+  ],
+  async (req, res, next) => {
+    const result = validationResult(req);
+    if (!result.isEmpty()) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    try {
+      const eventItem = await eventStore.findById(Number(req.params.id));
+      if (!eventItem) {
+        return res.status(404).render('errors/404', {
+          title: 'Evenement introuvable',
+          pageClass: 'page-error',
+        });
+      }
+
+      const variant = req.params.variant;
+      const storedName = req.params.storedName;
+      const filePath = variant === 'original'
+        ? imageVariantService.getOriginalPath(eventItem.uuid, storedName)
+        : imageVariantService.getVariantPath(eventItem.uuid, storedName, variant);
+
+      return res.sendFile(filePath, (sendErr) => {
+        if (!sendErr) {
+          return;
+        }
+
+        if (sendErr.code === 'ENOENT') {
+          res.status(404).end();
+          return;
+        }
+
+        next(sendErr);
+      });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
 
 module.exports = router;
