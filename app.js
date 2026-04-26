@@ -188,6 +188,7 @@ app.use((err, req, res, next) => {
   res.status(status).render('errors/500', {
     title:     'Erreur serveur',
     pageClass: 'page-error',
+    statusCode: status,
     message:   ENV === 'development' ? err.message : 'Une erreur interne est survenue.',
   });
 });

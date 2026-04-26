@@ -6,7 +6,10 @@
     <h1>Gestion des utilisateurs</h1>
     <p>Liste complete des comptes, profils et droits d'acces.</p>
   </div>
-  <a class="btn" href="/admin/users/new">Ajouter un utilisateur</a>
+  <div class="table-actions">
+    <a class="btn" href="/admin/users/new">Ajouter un utilisateur</a>
+    <a class="btn btn-secondary" href="/admin/events/new">Ajouter un evenement</a>
+  </div>
 </section>
 
 <section class="card table-card">
@@ -42,5 +45,52 @@
       <% }) %>
     </tbody>
   </table>
+</section>
+
+<section class="card admin-header section-gap">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h2>Gestion des evenements</h2>
+    <p>CRUD complet des evenements crees par les utilisateurs.</p>
+  </div>
+</section>
+
+<section class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>UUID</th>
+          <th>Nom</th>
+          <th>Proprietaire</th>
+          <th>Date/heure</th>
+          <th>Statut</th>
+          <th>Token</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% events.forEach((eventItem) => { %>
+          <tr>
+            <td><code><%= eventItem.uuid %></code></td>
+            <td><%= eventItem.name %></td>
+            <td><%= eventItem.ownerFullName %> (<%= eventItem.ownerEmail %>)</td>
+            <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
+            <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
+            <td><code><%= eventItem.token %></code></td>
+            <td>
+              <div class="table-actions">
+                <a class="btn btn-secondary btn-small" href="/admin/events/<%= eventItem.id %>/edit">Modifier</a>
+                <form method="post" action="/admin/events/<%= eventItem.id %>?_method=DELETE" class="inline-form">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button class="btn btn-danger btn-small" type="submit">Supprimer</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
 </section>
 <%- include('../partials/footer') %>

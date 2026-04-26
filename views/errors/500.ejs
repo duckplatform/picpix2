@@ -9,8 +9,8 @@
   <body class="<%= pageClass || '' %>">
     <main class="container">
       <section class="hero">
-        <h1><%= statusCode || 500 %></h1>
-        <p><%= message || 'Une erreur est survenue.' %></p>
+        <h1><%= typeof statusCode !== 'undefined' ? statusCode : 500 %></h1>
+        <p><%= typeof message !== 'undefined' ? message : 'Une erreur est survenue.' %></p>
         <a class="btn" href="/">Retour a l'accueil</a>
       </section>
     </main>

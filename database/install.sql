@@ -20,6 +20,27 @@ CREATE TABLE IF NOT EXISTS users (
 	KEY idx_users_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS events (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	uuid CHAR(36) NOT NULL,
+	owner_user_id BIGINT UNSIGNED NOT NULL,
+	name VARCHAR(180) NOT NULL,
+	starts_at DATETIME NOT NULL,
+	status ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
+	token CHAR(10) NOT NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	UNIQUE KEY uk_events_uuid (uuid),
+	UNIQUE KEY uk_events_token (token),
+	KEY idx_events_owner_status (owner_user_id, status),
+	KEY idx_events_starts_at (starts_at),
+	CONSTRAINT fk_events_owner_user
+		FOREIGN KEY (owner_user_id) REFERENCES users(id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO users (
 	email,
 	password_hash,

@@ -54,4 +54,70 @@
     </form>
   </article>
 </section>
+
+<section class="grid-columns section-gap">
+  <article class="card">
+    <p class="eyebrow">Mes evenements</p>
+    <h2>Creer un evenement</h2>
+    <form method="post" action="/profile/events" class="form-grid">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <label>
+        <span>Nom de l'evenement</span>
+        <input type="text" name="name" value="<%= formData.name || '' %>" required maxlength="180" />
+        <% if (fieldErrors.name) { %><small class="field-error"><%= fieldErrors.name %></small><% } %>
+      </label>
+
+      <label>
+        <span>Date et heure</span>
+        <input type="datetime-local" name="startsAt" value="<%= formData.startsAt || '' %>" required />
+        <% if (fieldErrors.startsAt) { %><small class="field-error"><%= fieldErrors.startsAt %></small><% } %>
+      </label>
+
+      <label>
+        <span>Statut</span>
+        <select name="status" required>
+          <option value="inactive" <%= (formData.status || 'inactive') === 'inactive' ? 'selected' : '' %>>inactive</option>
+          <option value="active" <%= formData.status === 'active' ? 'selected' : '' %>>active</option>
+        </select>
+        <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
+      </label>
+
+      <button class="btn" type="submit">Creer l'evenement</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <p class="eyebrow">Mes evenements</p>
+    <h2>Liste de mes evenements</h2>
+    <% if (!userEvents.length) { %>
+      <p>Aucun evenement cree pour le moment.</p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>UUID</th>
+              <th>Nom</th>
+              <th>Date/heure</th>
+              <th>Statut</th>
+              <th>Token</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% userEvents.forEach((eventItem) => { %>
+              <tr>
+                <td><code><%= eventItem.uuid %></code></td>
+                <td><%= eventItem.name %></td>
+                <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
+                <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
+                <td><code><%= eventItem.token %></code></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </article>
+</section>
 <%- include('partials/footer') %>

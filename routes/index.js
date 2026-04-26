@@ -8,6 +8,7 @@ const { body, param, validationResult } = require('express-validator');
 const logger = require('../config/logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const userStore = require('../services/userStore');
+const eventStore = require('../services/eventStore');
 
 const router = express.Router();
 
@@ -116,6 +117,45 @@ const profileValidators = [
     }).withMessage('La confirmation du mot de passe est invalide.'),
 ];
 
+const eventValidators = [
+  body('name')
+    .trim()
+    .isLength({ min: 3, max: 180 }).withMessage('Le nom de l\'evenement doit contenir entre 3 et 180 caracteres.'),
+  body('startsAt')
+    .trim()
+    .notEmpty().withMessage('La date/heure de l\'evenement est requise.')
+    .isISO8601().withMessage('Format de date/heure invalide.'),
+  body('status')
+    .trim()
+    .isIn(['active', 'inactive']).withMessage('Statut evenement invalide.'),
+];
+
+const adminEventValidators = [
+  ...eventValidators,
+  body('ownerUserId')
+    .trim()
+    .isInt({ min: 1 }).withMessage('Proprietaire invalide.'),
+  body('token')
+    .optional({ values: 'falsy' })
+    .trim()
+    .matches(/^[A-Za-z0-9]{10}$/).withMessage('Le token doit contenir 10 caracteres alphanumeriques.'),
+];
+
+async function renderProfile(req, res, payload = {}, status = 200) {
+  const events = await eventStore.listByOwner(req.currentUser.id);
+  return renderView(res, 'profile', {
+    title: 'Mon profil',
+    pageClass: 'page-profile',
+    userEvents: events,
+    formData: {
+      fullName: req.currentUser.fullName,
+      eventStatus: 'inactive',
+      ...payload.formData,
+    },
+    ...payload,
+  }, status);
+}
+
 router.get('/', (req, res) => {
   res.render('home', {
     title: 'Accueil',
@@ -216,20 +256,18 @@ router.post('/logout', requireAuth, (req, res, next) => {
   });
 });
 
-router.get('/profile', requireAuth, (req, res) => renderView(res, 'profile', {
-  title: 'Mon profil',
-  pageClass: 'page-profile',
-  formData: {
-    fullName: req.currentUser.fullName,
-  },
-}));
+router.get('/profile', requireAuth, async (req, res, next) => {
+  try {
+    return await renderProfile(req, res);
+  } catch (err) {
+    return next(err);
+  }
+});
 
 router.put('/profile', requireAuth, profileValidators, async (req, res, next) => {
   const result = validationResult(req);
   if (!result.isEmpty()) {
-    return renderView(res, 'profile', {
-      title: 'Mon profil',
-      pageClass: 'page-profile',
+    return renderProfile(req, res, {
       formData: req.body,
       fieldErrors: collectFieldErrors(result),
     }, 422);
@@ -241,9 +279,7 @@ router.put('/profile', requireAuth, profileValidators, async (req, res, next) =>
     if (req.body.password) {
       const passwordMatches = await bcrypt.compare(req.body.currentPassword, storedUser.passwordHash);
       if (!passwordMatches) {
-        return renderView(res, 'profile', {
-          title: 'Mon profil',
-          pageClass: 'page-profile',
+        return renderProfile(req, res, {
           formData: req.body,
           fieldErrors: { currentPassword: 'Le mot de passe actuel est incorrect.' },
         }, 422);
@@ -263,14 +299,234 @@ router.put('/profile', requireAuth, profileValidators, async (req, res, next) =>
   }
 });
 
+router.post('/profile/events', requireAuth, eventValidators, async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    try {
+      return await renderProfile(req, res, {
+        formData: {
+          fullName: req.currentUser.fullName,
+          ...req.body,
+        },
+        fieldErrors: collectFieldErrors(result),
+      }, 422);
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  try {
+    await eventStore.createEvent({
+      ownerUserId: req.currentUser.id,
+      name: req.body.name,
+      startsAt: req.body.startsAt,
+      status: req.body.status,
+    });
+
+    logger.info(`[EVENT] ${req.currentUser.email} a cree l'evenement ${req.body.name}`);
+    req.flash('success', 'Evenement cree avec succes.');
+    return res.redirect('/profile');
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get('/admin', requireAdmin, async (req, res, next) => {
   try {
     const users = await userStore.listUsers();
+    const events = await eventStore.listAll();
     return renderView(res, 'admin/dashboard', {
       title: 'Administration',
       pageClass: 'page-admin',
       users,
+      events,
     });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/admin/events/new', requireAdmin, async (req, res, next) => {
+  try {
+    const users = await userStore.listUsers();
+    return renderView(res, 'admin/event-form', {
+      title: 'Nouvel evenement',
+      pageClass: 'page-admin',
+      mode: 'create',
+      users,
+      editingEvent: null,
+      formData: { status: 'inactive' },
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    try {
+      const users = await userStore.listUsers();
+      return renderView(res, 'admin/event-form', {
+        title: 'Nouvel evenement',
+        pageClass: 'page-admin',
+        mode: 'create',
+        users,
+        editingEvent: null,
+        formData: req.body,
+        fieldErrors: collectFieldErrors(result),
+      }, 422);
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  try {
+    await eventStore.createEvent({
+      ownerUserId: Number(req.body.ownerUserId),
+      name: req.body.name,
+      startsAt: req.body.startsAt,
+      status: req.body.status,
+      token: req.body.token || undefined,
+    });
+
+    logger.info(`[ADMIN] ${req.currentUser.email} a cree un evenement (${req.body.name})`);
+    req.flash('success', 'Evenement cree avec succes.');
+    return res.redirect('/admin');
+  } catch (err) {
+    if (err.code === 'EVENT_UNIQUE_CONSTRAINT') {
+      try {
+        const users = await userStore.listUsers();
+        return renderView(res, 'admin/event-form', {
+          title: 'Nouvel evenement',
+          pageClass: 'page-admin',
+          mode: 'create',
+          users,
+          editingEvent: null,
+          formData: req.body,
+          fieldErrors: { token: 'Token deja utilise, veuillez en choisir un autre.' },
+        }, 409);
+      } catch (viewErr) {
+        return next(viewErr);
+      }
+    }
+
+    return next(err);
+  }
+});
+
+router.get('/admin/events/:id/edit', requireAdmin, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    const editingEvent = await eventStore.findById(Number(req.params.id));
+    if (!editingEvent) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    const users = await userStore.listUsers();
+    return renderView(res, 'admin/event-form', {
+      title: 'Modifier evenement',
+      pageClass: 'page-admin',
+      mode: 'edit',
+      users,
+      editingEvent,
+      formData: {
+        ...editingEvent,
+        startsAt: new Date(editingEvent.startsAt).toISOString().slice(0, 16),
+      },
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adminEventValidators, async (req, res, next) => {
+  const eventId = Number(req.params.id);
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    try {
+      const users = await userStore.listUsers();
+      const editingEvent = await eventStore.findById(eventId);
+      return renderView(res, 'admin/event-form', {
+        title: 'Modifier evenement',
+        pageClass: 'page-admin',
+        mode: 'edit',
+        users,
+        editingEvent,
+        formData: { ...req.body, id: eventId },
+        fieldErrors: collectFieldErrors(result),
+      }, 422);
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  try {
+    const updated = await eventStore.updateEvent(eventId, {
+      ownerUserId: Number(req.body.ownerUserId),
+      name: req.body.name,
+      startsAt: req.body.startsAt,
+      status: req.body.status,
+      token: req.body.token || undefined,
+    });
+
+    if (!updated) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    logger.info(`[ADMIN] ${req.currentUser.email} a mis a jour l'evenement ${updated.uuid}`);
+    req.flash('success', 'Evenement mis a jour.');
+    return res.redirect('/admin');
+  } catch (err) {
+    if (err.code === 'EVENT_UNIQUE_CONSTRAINT') {
+      try {
+        const users = await userStore.listUsers();
+        const editingEvent = await eventStore.findById(eventId);
+        return renderView(res, 'admin/event-form', {
+          title: 'Modifier evenement',
+          pageClass: 'page-admin',
+          mode: 'edit',
+          users,
+          editingEvent,
+          formData: { ...req.body, id: eventId },
+          fieldErrors: { token: 'Token deja utilise, veuillez en choisir un autre.' },
+        }, 409);
+      } catch (viewErr) {
+        return next(viewErr);
+      }
+    }
+
+    return next(err);
+  }
+});
+
+router.delete('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    await eventStore.deleteEvent(Number(req.params.id));
+    logger.info(`[ADMIN] ${req.currentUser.email} a supprime l'evenement #${req.params.id}`);
+    req.flash('success', 'Evenement supprime.');
+    return res.redirect('/admin');
   } catch (err) {
     return next(err);
   }

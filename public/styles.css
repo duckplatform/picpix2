@@ -209,6 +209,10 @@ p {
   margin-bottom: 24px;
 }
 
+.section-gap {
+  margin-top: 24px;
+}
+
 .form-grid {
   display: grid;
   gap: 18px;
@@ -267,6 +271,10 @@ dd {
 .data-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.table-wrap {
+  overflow-x: auto;
 }
 
 .data-table th,

@@ -7,7 +7,10 @@ Application web Node.js + Express + MySQL avec vues EJS, securisation HTTP, moni
 - inscription utilisateur avec validation serveur et protection CSRF
 - connexion / deconnexion avec session securisee
 - profil utilisateur avec mise a jour du nom et du mot de passe
+- creation d'evenements par utilisateur (UUID, nom, date/heure, statut actif/inactif, token 10 caracteres)
+- consultation des evenements personnels depuis le profil
 - interface d'administration pour lister, creer, modifier et supprimer des utilisateurs
+- interface d'administration avec CRUD complet des evenements
 - compte administrateur par defaut: admin@example.com / Admin1234
 - logs applicatifs via Winston dans logs/app.log et logs/error.log
 - endpoint de monitoring: /health
@@ -49,7 +52,8 @@ npm start
 - Inscription: /register
 - Connexion: /login
 - Profil utilisateur: /profile
-- Administration utilisateurs: /admin
+- Creation evenement utilisateur: /profile (section Mes evenements)
+- Administration utilisateurs et evenements: /admin
 - Sante applicative: /health
 
 ## Maintenance et securite
