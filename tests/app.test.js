@@ -1,11 +1,24 @@
 'use strict';
 
+const fs = require('fs/promises');
+const path = require('path');
 const request = require('supertest');
 const { expect } = require('chai');
 
 const app = require('../app');
 const userStore = require('../services/userStore');
 const eventStore = require('../services/eventStore');
+
+const EVENT_STORAGE_ROOT = path.join(__dirname, '..', 'storage', 'events');
+
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function extractCsrfToken(html) {
   const match = html.match(/name="_csrf"\s+value="([^"]+)"/);
@@ -17,9 +30,12 @@ function extractCsrfToken(html) {
 }
 
 describe('Tests applicatifs HTTP', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     userStore.resetTestState();
     eventStore.resetTestState();
+
+    await fs.rm(EVENT_STORAGE_ROOT, { recursive: true, force: true });
+    await fs.mkdir(EVENT_STORAGE_ROOT, { recursive: true });
   });
 
   describe('Pages publiques', () => {
@@ -217,6 +233,9 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].token).to.match(/^[A-Za-z0-9]{10}$/);
       expect(events[0].status).to.equal('active');
       expect(events[0].description).to.equal('Festival culturel et musical du printemps.');
+
+      const eventStoragePath = path.join(EVENT_STORAGE_ROOT, events[0].uuid);
+      expect(await pathExists(eventStoragePath)).to.equal(true);
     });
 
     it('sanitise la description markdown lors de la creation d\'evenement', async () => {
@@ -359,6 +378,9 @@ describe('Tests applicatifs HTTP', () => {
 
       const eventsAfterDelete = await eventStore.listByOwner(owner.id);
       expect(eventsAfterDelete).to.have.lengthOf(0);
+
+      const eventStoragePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid);
+      expect(await pathExists(eventStoragePath)).to.equal(false);
     });
   });
 
@@ -490,6 +512,9 @@ describe('Tests applicatifs HTTP', () => {
       expect(createdEvent.name).to.equal('Soiree Admin');
       expect(createdEvent.description).to.equal('Soiree privee pour les administrateurs.');
 
+      const eventStoragePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid);
+      expect(await pathExists(eventStoragePath)).to.equal(true);
+
       const editPage = await agent.get(`/admin/events/${createdEvent.id}/edit`);
       const editCsrf = extractCsrfToken(editPage.text);
 
@@ -543,6 +568,7 @@ describe('Tests applicatifs HTTP', () => {
 
       const eventsAfterDelete = await eventStore.listAll();
       expect(eventsAfterDelete).to.have.lengthOf(0);
+      expect(await pathExists(eventStoragePath)).to.equal(false);
     });
   });
 

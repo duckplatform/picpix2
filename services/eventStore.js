@@ -1,11 +1,14 @@
 'use strict';
 
 const crypto = require('crypto');
+const fs = require('fs/promises');
+const path = require('path');
 
 const { pool } = require('../config/database');
 const userStore = require('./userStore');
 
 const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const EVENT_STORAGE_ROOT = path.join(__dirname, '..', 'storage', 'events');
 
 let testEvents = [];
 let nextTestEventId = 1;
@@ -21,6 +24,18 @@ function randomToken(length = 10) {
     token += TOKEN_ALPHABET[alphabetIndex];
   }
   return token;
+}
+
+function eventStoragePath(eventUuid) {
+  return path.join(EVENT_STORAGE_ROOT, eventUuid);
+}
+
+async function ensureEventStorageDirectory(eventUuid) {
+  await fs.mkdir(eventStoragePath(eventUuid), { recursive: true });
+}
+
+async function removeEventStorageDirectory(eventUuid) {
+  await fs.rm(eventStoragePath(eventUuid), { recursive: true, force: true });
 }
 
 function normalizeRow(row) {
@@ -180,9 +195,12 @@ async function createEvent({ ownerUserId, name, description = '', startsAt, stat
   const eventToken = token || await generateUniqueToken();
   const eventUuid = crypto.randomUUID();
 
+  await ensureEventStorageDirectory(eventUuid);
+
   if (useTestStore()) {
     const tokenExists = testEvents.some((eventItem) => eventItem.token === eventToken);
     if (tokenExists) {
+      await removeEventStorageDirectory(eventUuid);
       const duplicateError = new Error('EVENT_UNIQUE_CONSTRAINT');
       duplicateError.code = 'EVENT_UNIQUE_CONSTRAINT';
       throw duplicateError;
@@ -214,6 +232,8 @@ async function createEvent({ ownerUserId, name, description = '', startsAt, stat
 
     return findById(result.insertId);
   } catch (err) {
+    await removeEventStorageDirectory(eventUuid);
+
     if (err && err.code === 'ER_DUP_ENTRY') {
       const duplicateError = new Error('EVENT_UNIQUE_CONSTRAINT');
       duplicateError.code = 'EVENT_UNIQUE_CONSTRAINT';
@@ -284,13 +304,28 @@ async function updateEvent(eventId, payload) {
 
 async function deleteEvent(eventId) {
   if (useTestStore()) {
-    const before = testEvents.length;
-    testEvents = testEvents.filter((eventItem) => eventItem.id !== Number(eventId));
-    return before !== testEvents.length;
+    const targetIndex = testEvents.findIndex((eventItem) => eventItem.id === Number(eventId));
+    if (targetIndex === -1) {
+      return false;
+    }
+
+    const [removedEvent] = testEvents.splice(targetIndex, 1);
+    await removeEventStorageDirectory(removedEvent.uuid);
+    return true;
+  }
+
+  const existing = await findById(eventId);
+  if (!existing) {
+    return false;
   }
 
   const [result] = await pool.query('DELETE FROM events WHERE id = ?', [eventId]);
-  return result.affectedRows > 0;
+  if (result.affectedRows === 0) {
+    return false;
+  }
+
+  await removeEventStorageDirectory(existing.uuid);
+  return true;
 }
 
 function resetTestState() {

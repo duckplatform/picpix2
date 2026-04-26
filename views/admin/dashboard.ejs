@@ -77,7 +77,7 @@
             <td>
               <div class="table-actions">
                 <a class="btn btn-secondary btn-small" href="/admin/events/<%= eventItem.id %>/edit">Modifier</a>
-                <form method="post" action="/admin/events/<%= eventItem.id %>?_method=DELETE" class="inline-form">
+                <form method="post" action="/admin/events/<%= eventItem.id %>?_method=DELETE" class="inline-form" onsubmit="return confirm('Supprimer cet evenement ? Cette action supprimera aussi toutes les donnees stockees de cet evenement.');">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                   <button class="btn btn-danger btn-small" type="submit">Supprimer</button>
                 </form>
