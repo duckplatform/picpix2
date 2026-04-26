@@ -29,6 +29,23 @@ function extractCsrfToken(html) {
   return match[1];
 }
 
+async function registerGuestForEvent(agent, token, guestName = 'Visiteur Test') {
+  const registerPage = await agent.get(`/event/${token}/register`);
+  expect(registerPage.status).to.equal(200);
+  const csrfToken = extractCsrfToken(registerPage.text);
+
+  const registerResponse = await agent
+    .post(`/event/${token}/register`)
+    .type('form')
+    .send({
+      _csrf: csrfToken,
+      guestName,
+    });
+
+  expect(registerResponse.status).to.equal(302);
+  expect(registerResponse.headers.location).to.equal(`/event/${token}`);
+}
+
 describe('Tests applicatifs HTTP', () => {
   beforeEach(async () => {
     userStore.resetTestState();
@@ -71,7 +88,14 @@ describe('Tests applicatifs HTTP', () => {
         status: 'active',
       });
 
-      const res = await request(app).get(`/event/${createdEvent.token}`);
+      const agent = request.agent(app);
+      const preAccess = await agent.get(`/event/${createdEvent.token}`);
+      expect(preAccess.status).to.equal(302);
+      expect(preAccess.headers.location).to.equal(`/event/${createdEvent.token}/register`);
+
+      await registerGuestForEvent(agent, createdEvent.token, 'Alex Event');
+
+      const res = await agent.get(`/event/${createdEvent.token}`);
 
       expect(res.status).to.equal(200);
       expect(res.text).to.include('Concert Public');
@@ -90,11 +114,32 @@ describe('Tests applicatifs HTTP', () => {
         status: 'inactive',
       });
 
-      const res = await request(app).get(`/event/${createdEvent.token}`);
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Nora Timer');
+
+      const res = await agent.get(`/event/${createdEvent.token}`);
 
       expect(res.status).to.equal(200);
       expect(res.text).to.include('id="countdownScreen" class="countdown-screen" aria-live="polite" >');
       expect(res.text).to.include('id="welcomeScreen" class="welcome-screen" aria-live="polite" hidden');
+    });
+
+    it('GET /event/:token/register redirige vers /event/:token si le cookie visiteur existe deja', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Conference Invite',
+        description: 'Conference privee avec inscription visiteur.',
+        startsAt: '2099-11-02T10:00:00',
+        status: 'inactive',
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Camille');
+
+      const registerPage = await agent.get(`/event/${createdEvent.token}/register`);
+      expect(registerPage.status).to.equal(302);
+      expect(registerPage.headers.location).to.equal(`/event/${createdEvent.token}`);
     });
 
     it('GET /event/:token retourne 404 si le token est inconnu', async () => {
@@ -276,7 +321,9 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].description).to.include('**public**');
       expect(events[0].description).to.not.include('<script>');
 
-      const eventPage = await request(app).get(`/event/${events[0].token}`);
+      const eventAgent = request.agent(app);
+      await registerGuestForEvent(eventAgent, events[0].token, 'Lecteur Markdown');
+      const eventPage = await eventAgent.get(`/event/${events[0].token}`);
       expect(eventPage.status).to.equal(200);
       expect(eventPage.text).to.include('<strong>public</strong>');
       expect(eventPage.text).to.not.include('alert("x")');

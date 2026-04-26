@@ -88,6 +88,34 @@ function ensureGuest(req, res, next) {
   return next();
 }
 
+function eventGuestCookieName(token) {
+  return `event_guest_${token}`;
+}
+
+function getCookieValue(req, cookieName) {
+  const rawCookieHeader = req.headers.cookie || '';
+  if (!rawCookieHeader) {
+    return null;
+  }
+
+  const parts = rawCookieHeader.split(';');
+  for (const part of parts) {
+    const [name, ...valueParts] = part.trim().split('=');
+    if (name !== cookieName) {
+      continue;
+    }
+
+    return decodeURIComponent(valueParts.join('='));
+  }
+
+  return null;
+}
+
+function getEventGuestName(req, token) {
+  const value = getCookieValue(req, eventGuestCookieName(token));
+  return value ? value.trim() : '';
+}
+
 function passwordRules(fieldName = 'password', required = true) {
   const chain = body(fieldName)
     .trim()
@@ -187,6 +215,12 @@ const adminEventValidators = [
     .isInt({ min: 1 }).withMessage('Proprietaire invalide.'),
 ];
 
+const eventGuestRegistrationValidators = [
+  body('guestName')
+    .trim()
+    .isLength({ min: 2, max: 120 }).withMessage('Le nom doit contenir entre 2 et 120 caracteres.'),
+];
+
 function toDateTimeLocal(value) {
   if (!value) {
     return '';
@@ -272,6 +306,11 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
       });
     }
 
+    const guestName = getEventGuestName(req, req.params.token);
+    if (!guestName) {
+      return res.redirect(`/event/${req.params.token}/register`);
+    }
+
     const now = new Date();
     const startsAtDate = new Date(eventItem.startsAt);
     const hasValidStartDate = !Number.isNaN(startsAtDate.getTime());
@@ -283,11 +322,82 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
       title: eventItem.name,
       pageClass: 'page-event',
       eventItem,
+      guestName,
       renderedDescriptionHtml: renderEventDescriptionMarkdown(eventItem.description),
       nowIso: new Date().toISOString(),
       eventStartsAtIso: hasValidStartDate ? startsAtDate.toISOString() : null,
       shouldShowCountdown,
     });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    const eventItem = await eventStore.findByToken(req.params.token);
+    if (!eventItem) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    const guestName = getEventGuestName(req, req.params.token);
+    if (guestName) {
+      return res.redirect(`/event/${req.params.token}`);
+    }
+
+    return renderView(res, 'event-register', {
+      title: `${eventItem.name} - Inscription`,
+      pageClass: 'page-event',
+      eventItem,
+      formData: { guestName: '' },
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), eventGuestRegistrationValidators, async (req, res, next) => {
+  const result = validationResult(req);
+  try {
+    const eventItem = await eventStore.findByToken(req.params.token);
+    if (!eventItem) {
+      return res.status(404).render('errors/404', {
+        title: 'Evenement introuvable',
+        pageClass: 'page-error',
+      });
+    }
+
+    if (!result.isEmpty()) {
+      return renderView(res, 'event-register', {
+        title: `${eventItem.name} - Inscription`,
+        pageClass: 'page-event',
+        eventItem,
+        formData: { guestName: req.body.guestName || '' },
+        fieldErrors: collectFieldErrors(result),
+      }, 422);
+    }
+
+    const guestName = req.body.guestName.trim();
+    res.cookie(eventGuestCookieName(req.params.token), guestName, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: `/event/${req.params.token}`,
+    });
+
+    return res.redirect(`/event/${req.params.token}`);
   } catch (err) {
     return next(err);
   }
