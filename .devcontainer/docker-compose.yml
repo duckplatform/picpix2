@@ -43,7 +43,7 @@ services:
         condition: service_healthy
     # Réseau partagé avec MySQL
     networks:
-      - lanparty-net
+      - picpix-net
 
   # ── Base de données MySQL 8.0 ────────────────────────────────
   mysql:
@@ -68,11 +68,11 @@ services:
       retries:  12
       start_period: 20s
     networks:
-      - lanparty-net
+      - picpix-net
 
 # ── Réseau interne ────────────────────────────────────────────
 networks:
-  lanparty-net:
+  picpix-net:
     driver: bridge
 
 # ── Volume nommé pour la persistance MySQL ────────────────────
