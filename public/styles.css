@@ -76,6 +76,142 @@ body {
   font-weight: 600;
 }
 
+.nav-links-event {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.event-links-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-links-event a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.84rem;
+  border: 0;
+  background: rgba(15, 118, 110, 0.1);
+}
+
+.header-inner-event {
+  display: block;
+}
+
+.event-site-stack {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-brand {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font-size: 1.18rem;
+  font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
+}
+
+.event-user-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 0;
+  background: rgba(15, 118, 110, 0.1);
+  border-radius: 999px;
+  padding: 5px 11px;
+  margin-left: auto;
+}
+
+.event-user-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 118, 110, 0.18);
+  font-size: 0.78rem;
+}
+
+.event-user-name {
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .header-inner {
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .header-inner-event {
+    display: block;
+  }
+
+  .nav-links-event {
+    gap: 6px;
+    justify-self: stretch;
+  }
+
+  .event-links-left {
+    gap: 6px;
+  }
+
+  .nav-links-event a {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 0.8rem;
+  }
+
+  .event-brand {
+    font-size: 1.02rem;
+  }
+
+  .event-user-chip {
+    min-height: 30px;
+    padding: 4px 9px;
+    gap: 4px;
+  }
+
+  .event-user-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 0.72rem;
+  }
+
+  .event-user-name {
+    display: inline;
+    max-width: 72px;
+    font-size: 0.78rem;
+  }
+}
+
 .inline-form {
   display: inline-flex;
 }

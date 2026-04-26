@@ -125,6 +125,16 @@ function getEventGuestName(req, token) {
   return value ? value.trim() : '';
 }
 
+function buildEventSiteNav(token, guestName, eventName) {
+  return {
+    token,
+    guestName: (guestName || 'Visiteur').trim().slice(0, 120),
+    eventName: (eventName || 'Evenement').trim().slice(0, 120),
+    eventUrl: `/event/${token}`,
+    uploadUrl: `/event/${token}/upload`,
+  };
+}
+
 function parseUploadAllowMultiple(value) {
   return value === true || value === 'true' || value === '1' || value === 'on';
 }
@@ -427,6 +437,7 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
       pageClass: 'page-event',
       eventItem,
       guestName,
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
       renderedDescriptionHtml: renderEventDescriptionMarkdown(eventItem.description),
       nowIso: new Date().toISOString(),
       eventStartsAtIso: hasValidStartDate ? startsAtDate.toISOString() : null,
@@ -463,6 +474,7 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
       pageClass: 'page-event',
       eventItem,
       guestName,
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
       uploadOptions: {
         sourceMode: eventItem.uploadSourceMode,
         allowMultiple: eventItem.uploadAllowMultiple,
@@ -586,6 +598,7 @@ router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]
       title: `${eventItem.name} - Inscription`,
       pageClass: 'page-event',
       eventItem,
+      eventSiteNav: buildEventSiteNav(req.params.token, null, eventItem.name),
       formData: { guestName: '' },
     });
   } catch (err) {
@@ -606,6 +619,7 @@ router.post('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9
         title: `${eventItem.name} - Inscription`,
         pageClass: 'page-event',
         eventItem,
+        eventSiteNav: buildEventSiteNav(req.params.token, req.body.guestName || '', eventItem.name),
         formData: { guestName: req.body.guestName || '' },
         fieldErrors: collectFieldErrors(result),
       }, 422);

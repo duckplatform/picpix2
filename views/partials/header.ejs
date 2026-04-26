@@ -1,22 +1,38 @@
 <header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="/">PicPix2</a>
-    <nav class="nav-links" aria-label="Navigation principale">
-      <a href="/">Accueil</a>
-      <% if (user) { %>
-        <a href="/profile">Profil</a>
-        <% if (user.role === 'admin') { %>
-          <a href="/admin">Administration</a>
+  <div class="container header-inner <%= (typeof eventSiteNav !== 'undefined' && eventSiteNav) ? 'header-inner-event' : '' %>">
+    <% if (typeof eventSiteNav !== 'undefined' && eventSiteNav) { %>
+      <div class="event-site-stack">
+        <a class="brand event-brand" href="<%= eventSiteNav.eventUrl %>"><%= eventSiteNav.eventName %></a>
+        <nav class="nav-links nav-links-event" aria-label="Navigation evenement">
+          <span class="event-links-left">
+            <a href="<%= eventSiteNav.eventUrl %>">Evenement</a>
+            <a href="<%= eventSiteNav.uploadUrl %>">Upload</a>
+          </span>
+          <span class="event-user-chip" title="<%= eventSiteNav.guestName %>">
+            <span class="event-user-name"><%= eventSiteNav.guestName %></span>
+            <span class="event-user-icon" aria-hidden="true">👤</span>
+          </span>
+        </nav>
+      </div>
+    <% } else { %>
+      <a class="brand" href="/">PicPix2</a>
+      <nav class="nav-links" aria-label="Navigation principale">
+        <a href="/">Accueil</a>
+        <% if (user) { %>
+          <a href="/profile">Profil</a>
+          <% if (user.role === 'admin') { %>
+            <a href="/admin">Administration</a>
+          <% } %>
+          <form method="post" action="/logout" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button class="btn btn-secondary btn-inline" type="submit">Deconnexion</button>
+          </form>
+        <% } else { %>
+          <a href="/register">Inscription</a>
+          <a href="/login">Connexion</a>
         <% } %>
-        <form method="post" action="/logout" class="inline-form">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-          <button class="btn btn-secondary btn-inline" type="submit">Deconnexion</button>
-        </form>
-      <% } else { %>
-        <a href="/register">Inscription</a>
-        <a href="/login">Connexion</a>
-      <% } %>
-    </nav>
+      </nav>
+    <% } %>
   </div>
 </header>
 
