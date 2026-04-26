@@ -30,3 +30,6 @@ coverage/
 
 # Session store (si fichier)
 sessions/
+
+# Stockage physique des fichiers evenement
+storage/

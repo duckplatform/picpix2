@@ -5,6 +5,9 @@
   <h1><%= eventItem.name %></h1>
   <div class="richtext-content"><%- renderedDescriptionHtml %></div>
   <p>Debut: <strong><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></strong></p>
+  <div class="hero-actions">
+    <a class="btn" href="/event/<%= eventItem.token %>/upload">Deposer des photos</a>
+  </div>
 
   <section id="countdownScreen" class="countdown-screen" aria-live="polite" <%= shouldShowCountdown ? '' : 'hidden' %>>
     <h2>L'evenement commence bientot</h2>

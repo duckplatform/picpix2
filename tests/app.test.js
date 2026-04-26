@@ -6,6 +6,7 @@ const request = require('supertest');
 const { expect } = require('chai');
 
 const app = require('../app');
+const eventFileStore = require('../services/eventFileStore');
 const userStore = require('../services/userStore');
 const eventStore = require('../services/eventStore');
 
@@ -49,6 +50,7 @@ async function registerGuestForEvent(agent, token, guestName = 'Visiteur Test') 
 describe('Tests applicatifs HTTP', () => {
   beforeEach(async () => {
     userStore.resetTestState();
+    eventFileStore.resetTestState();
     eventStore.resetTestState();
 
     await fs.rm(EVENT_STORAGE_ROOT, { recursive: true, force: true });
@@ -140,6 +142,61 @@ describe('Tests applicatifs HTTP', () => {
       const registerPage = await agent.get(`/event/${createdEvent.token}/register`);
       expect(registerPage.status).to.equal(302);
       expect(registerPage.headers.location).to.equal(`/event/${createdEvent.token}`);
+    });
+
+    it('GET /event/:token/upload redirige vers le register si le visiteur n\'est pas encore identifie', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Galerie publique',
+        description: 'Evenement ouvert aux uploads visiteurs.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+      });
+
+      const res = await request(app).get(`/event/${createdEvent.token}/upload`);
+      expect(res.status).to.equal(302);
+      expect(res.headers.location).to.equal(`/event/${createdEvent.token}/register`);
+    });
+
+    it('POST /event/:token/upload stocke une photo avec nom physique UUID et metadata en base', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Mur Photo',
+        description: 'Televersement de photos visiteurs.',
+        startsAt: '2099-06-01T19:00:00',
+        status: 'active',
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Photographe Invite');
+
+      const uploadPage = await agent.get(`/event/${createdEvent.token}/upload`);
+      const uploadCsrfToken = extractCsrfToken(uploadPage.text);
+
+      const uploadResponse = await agent
+        .post(`/event/${createdEvent.token}/upload`)
+        .set('x-csrf-token', uploadCsrfToken)
+        .attach('photos', Buffer.from('fake image payload'), {
+          filename: 'photo-souvenir.jpg',
+          contentType: 'image/jpeg',
+        });
+
+      expect(uploadResponse.status).to.equal(201);
+      expect(uploadResponse.body.files).to.have.lengthOf(1);
+      expect(uploadResponse.body.files[0].originalName).to.equal('photo-souvenir.jpg');
+      expect(uploadResponse.body.files[0].storedName).to.match(/^[0-9a-f-]{36}\.jpg$/i);
+      expect(uploadResponse.body.files[0].storedName).to.not.equal('photo-souvenir.jpg');
+      expect(uploadResponse.body.files[0].storagePath).to.equal(`events/${createdEvent.uuid}/${uploadResponse.body.files[0].storedName}`);
+      expect(uploadResponse.body.files[0].checksumSha256).to.match(/^[0-9a-f]{64}$/i);
+
+      const eventFiles = await eventFileStore.listByEvent(createdEvent.id);
+      expect(eventFiles).to.have.lengthOf(1);
+      expect(eventFiles[0].originalName).to.equal('photo-souvenir.jpg');
+
+      const storedFilePath = path.join(EVENT_STORAGE_ROOT, createdEvent.uuid, eventFiles[0].storedName);
+      expect(await pathExists(storedFilePath)).to.equal(true);
     });
 
     it('GET /event/:token retourne 404 si le token est inconnu', async () => {

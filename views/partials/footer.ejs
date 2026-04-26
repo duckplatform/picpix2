@@ -1,3 +1,6 @@
 </main>
+  <% (typeof footerScriptPaths !== 'undefined' ? footerScriptPaths : []).forEach((src) => { %>
+    <script src="<%= src %>"></script>
+  <% }) %>
   </body>
 </html>

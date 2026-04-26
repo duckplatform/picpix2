@@ -2,6 +2,10 @@
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const fs = require('fs/promises');
+const multer = require('multer');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const sanitizeHtml = require('sanitize-html');
 const { marked } = require('marked');
@@ -9,10 +13,12 @@ const { body, param, validationResult } = require('express-validator');
 
 const logger = require('../config/logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const eventFileStore = require('../services/eventFileStore');
 const userStore = require('../services/userStore');
 const eventStore = require('../services/eventStore');
 
 const router = express.Router();
+const MAX_EVENT_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -67,6 +73,8 @@ function renderView(res, view, payload = {}, status = 200) {
     pageClass: '',
     formData: {},
     fieldErrors: {},
+    headCssPaths: [],
+    footerScriptPaths: [],
     ...payload,
   });
 }
@@ -115,6 +123,63 @@ function getEventGuestName(req, token) {
   const value = getCookieValue(req, eventGuestCookieName(token));
   return value ? value.trim() : '';
 }
+
+function sanitizeFileExtension(originalName) {
+  const extension = path.extname(originalName || '').toLowerCase();
+  if (!extension || !/^\.[a-z0-9]{1,10}$/.test(extension)) {
+    return '';
+  }
+
+  return extension;
+}
+
+async function computeFileChecksum(filePath) {
+  const fileBuffer = await fs.readFile(filePath);
+  return crypto.createHash('sha256').update(fileBuffer).digest('hex');
+}
+
+async function loadEventByTokenOr404(req, res) {
+  const eventItem = await eventStore.findByToken(req.params.token);
+  if (!eventItem) {
+    res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+    return null;
+  }
+
+  return eventItem;
+}
+
+function createEventUploadMiddleware() {
+  const storage = multer.diskStorage({
+    destination(req, file, callback) {
+      callback(null, eventStore.getEventStoragePath(req.eventItem.uuid));
+    },
+    filename(req, file, callback) {
+      const extension = sanitizeFileExtension(file.originalname);
+      callback(null, `${crypto.randomUUID()}${extension}`);
+    },
+  });
+
+  return multer({
+    storage,
+    limits: {
+      fileSize: MAX_EVENT_UPLOAD_SIZE_BYTES,
+      files: 10,
+    },
+    fileFilter(req, file, callback) {
+      if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+        callback(new Error('INVALID_FILE_TYPE'));
+        return;
+      }
+
+      callback(null, true);
+    },
+  }).array('photos', 10);
+}
+
+const eventUploadMiddleware = createEventUploadMiddleware();
 
 function passwordRules(fieldName = 'password', required = true) {
   const chain = body(fieldName)
@@ -298,12 +363,9 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
   }
 
   try {
-    const eventItem = await eventStore.findByToken(req.params.token);
+    const eventItem = await loadEventByTokenOr404(req, res);
     if (!eventItem) {
-      return res.status(404).render('errors/404', {
-        title: 'Evenement introuvable',
-        pageClass: 'page-error',
-      });
+      return undefined;
     }
 
     const guestName = getEventGuestName(req, req.params.token);
@@ -333,6 +395,115 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
   }
 });
 
+router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).render('errors/404', {
+      title: 'Evenement introuvable',
+      pageClass: 'page-error',
+    });
+  }
+
+  try {
+    const eventItem = await loadEventByTokenOr404(req, res);
+    if (!eventItem) {
+      return undefined;
+    }
+
+    const guestName = getEventGuestName(req, req.params.token);
+    if (!guestName) {
+      return res.redirect(`/event/${req.params.token}/register`);
+    }
+
+    const uploadedFiles = await eventFileStore.listByEvent(eventItem.id);
+    return renderView(res, 'event-upload', {
+      title: `${eventItem.name} - Upload photos`,
+      pageClass: 'page-event',
+      eventItem,
+      guestName,
+      headCssPaths: ['/vendor/uppy/uppy.min.css'],
+      footerScriptPaths: ['/vendor/uppy/uppy.min.js', '/event-upload.js'],
+      uploadedFiles,
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return res.status(404).json({ message: 'Evenement introuvable.' });
+  }
+
+  try {
+    const eventItem = await eventStore.findByToken(req.params.token);
+    if (!eventItem) {
+      return res.status(404).json({ message: 'Evenement introuvable.' });
+    }
+
+    req.eventItem = eventItem;
+
+    const guestName = getEventGuestName(req, req.params.token);
+    if (!guestName) {
+      return res.status(403).json({ message: 'Inscription visiteur requise avant upload.' });
+    }
+
+    return eventUploadMiddleware(req, res, async (uploadErr) => {
+      if (uploadErr) {
+        if (uploadErr.message === 'INVALID_FILE_TYPE') {
+          return res.status(415).json({ message: 'Seules les images sont autorisees.' });
+        }
+
+        if (uploadErr.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ message: 'Un fichier depasse la taille maximale autorisee (10 Mo).' });
+        }
+
+        if (uploadErr.code === 'LIMIT_FILE_COUNT') {
+          return res.status(413).json({ message: 'Trop de fichiers envoyes en une seule fois.' });
+        }
+
+        return next(uploadErr);
+      }
+
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'Aucun fichier image recu.' });
+      }
+
+      try {
+        const createdFiles = [];
+        for (const file of req.files) {
+          const checksumSha256 = await computeFileChecksum(file.path);
+          const record = await eventFileStore.createFileRecord({
+            eventId: eventItem.id,
+            uploadedByUserId: req.currentUser ? req.currentUser.id : null,
+            originalName: file.originalname,
+            storedName: file.filename,
+            sizeBytes: file.size,
+            storagePath: path.posix.join('events', eventItem.uuid, file.filename),
+            checksumSha256,
+          });
+
+          createdFiles.push(record);
+        }
+
+        logger.info(`[EVENT] Upload visiteur ${guestName} sur evenement ${eventItem.uuid}: ${createdFiles.length} fichier(s)`);
+        return res.status(201).json({
+          message: `${createdFiles.length} fichier(s) televerse(s) avec succes.`,
+          files: createdFiles,
+        });
+      } catch (err) {
+        if (req.files) {
+          await Promise.all(req.files.map((file) => fs.rm(file.path, { force: true })));
+        }
+        return next(err);
+      }
+    });
+  } catch (err) {
+    return next(err);
+  }
+});
+
 router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), async (req, res, next) => {
   const result = validationResult(req);
   if (!result.isEmpty()) {
@@ -343,12 +514,9 @@ router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]
   }
 
   try {
-    const eventItem = await eventStore.findByToken(req.params.token);
+    const eventItem = await loadEventByTokenOr404(req, res);
     if (!eventItem) {
-      return res.status(404).render('errors/404', {
-        title: 'Evenement introuvable',
-        pageClass: 'page-error',
-      });
+      return undefined;
     }
 
     const guestName = getEventGuestName(req, req.params.token);
@@ -370,12 +538,9 @@ router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]
 router.post('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), eventGuestRegistrationValidators, async (req, res, next) => {
   const result = validationResult(req);
   try {
-    const eventItem = await eventStore.findByToken(req.params.token);
+    const eventItem = await loadEventByTokenOr404(req, res);
     if (!eventItem) {
-      return res.status(404).render('errors/404', {
-        title: 'Evenement introuvable',
-        pageClass: 'page-error',
-      });
+      return undefined;
     }
 
     if (!result.isEmpty()) {

@@ -1,0 +1,53 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<section class="card form-card">
+  <div>
+    <p class="eyebrow">Depot de photos</p>
+    <h1><%= eventItem.name %></h1>
+    <p>Bonjour <strong><%= guestName %></strong>. Vous pouvez envoyer vos photos de l'evenement ici.</p>
+    <p>Cette interface est optimisee smartphone : galerie, prise de vue et envois multiples.</p>
+  </div>
+
+  <input type="hidden" id="upload-csrf" name="_csrf" value="<%= csrfToken %>" />
+  <input type="hidden" id="upload-endpoint" value="/event/<%= eventItem.token %>/upload" />
+
+  <div class="upload-mobile-actions">
+    <a class="btn btn-secondary" href="/event/<%= eventItem.token %>">Retour a l'evenement</a>
+  </div>
+
+  <div id="upload-feedback" class="flash-stack"></div>
+  <div id="uppy-dashboard" class="uppy-host"></div>
+</section>
+
+<section class="card table-card section-gap">
+  <div>
+    <p class="eyebrow">Historique</p>
+    <h2>Fichiers recents</h2>
+  </div>
+
+  <% if (!uploadedFiles.length) { %>
+    <p>Aucun fichier envoye pour le moment.</p>
+  <% } else { %>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nom original</th>
+            <th>Taille</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="uploaded-files-table-body">
+          <% uploadedFiles.forEach((fileItem) => { %>
+            <tr>
+              <td><%= fileItem.originalName %></td>
+              <td><%= Math.round(fileItem.sizeBytes / 1024) %> Ko</td>
+              <td><%= new Date(fileItem.createdAt).toLocaleString('fr-FR') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+<%- include('partials/footer') %>

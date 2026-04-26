@@ -42,6 +42,29 @@ CREATE TABLE IF NOT EXISTS events (
 		ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS event_files (
+	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+	event_id BIGINT UNSIGNED NOT NULL,
+	uploaded_by_user_id BIGINT UNSIGNED NULL,
+	original_name VARCHAR(255) NOT NULL,
+	stored_name VARCHAR(255) NOT NULL,
+	size_bytes BIGINT UNSIGNED NOT NULL,
+	storage_path VARCHAR(500) NOT NULL,
+	checksum_sha256 CHAR(64) NULL,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_event_files_event_created (event_id, created_at),
+	KEY idx_event_files_uploaded_by (uploaded_by_user_id),
+	CONSTRAINT fk_event_files_event
+		FOREIGN KEY (event_id) REFERENCES events(id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
+	CONSTRAINT fk_event_files_uploaded_by_user
+		FOREIGN KEY (uploaded_by_user_id) REFERENCES users(id)
+		ON DELETE SET NULL
+		ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO users (
 	email,
 	password_hash,

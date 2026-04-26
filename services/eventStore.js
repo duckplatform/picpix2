@@ -339,6 +339,7 @@ module.exports = {
   findById,
   findByToken,
   generateUniqueToken,
+  getEventStoragePath: eventStoragePath,
   listAll,
   listByOwner,
   resetTestState,

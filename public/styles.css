@@ -273,6 +273,24 @@ textarea:focus {
   color: var(--primary);
 }
 
+.upload-mobile-actions {
+  margin: 18px 0;
+}
+
+.uppy-host .uppy-Dashboard-AddFiles {
+  border-radius: 10px;
+}
+
+.uppy-host .uppy-Dashboard-inner,
+.uppy-host .uppy-DashboardContent-back,
+.uppy-host .uppy-DashboardContent-panel {
+  border-radius: 12px;
+}
+
+.uppy-host .uppy-Dashboard-inner {
+  border: 1px solid var(--border);
+}
+
 .richtext-content p {
   margin: 0 0 8px;
 }

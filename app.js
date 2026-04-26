@@ -78,6 +78,10 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: ENV === 'production' ? '1d' : 0,
 }));
 
+app.use('/vendor/uppy', express.static(path.join(__dirname, 'node_modules', 'uppy', 'dist'), {
+  maxAge: ENV === 'production' ? '1d' : 0,
+}));
+
 // ─── Sessions ─────────────────────────────────────────────────────────────
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-this-secret-in-production';
