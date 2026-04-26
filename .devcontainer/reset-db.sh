@@ -30,7 +30,7 @@ mysql_cmd() {
 
 echo ""
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}  LANPartyManager — Reset base Codespace            ${NC}"
+echo -e "${YELLOW}  Reset base Codespace                             ${NC}"
 echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
 echo ""

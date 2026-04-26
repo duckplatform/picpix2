@@ -35,6 +35,7 @@ function normalizeRow(row) {
     ownerEmail: row.ownerEmail || row.owner_email || null,
     ownerFullName: row.ownerFullName || row.owner_full_name || null,
     name: row.name,
+    description: row.description || '',
     startsAt: row.startsAt || row.starts_at,
     status: row.status,
     token: row.token,
@@ -77,7 +78,7 @@ async function listByOwner(ownerUserId) {
   }
 
   const [rows] = await pool.query(`
-    SELECT id, uuid, owner_user_id AS ownerUserId, name,
+    SELECT id, uuid, owner_user_id AS ownerUserId, name, description,
            starts_at AS startsAt, status, token,
            created_at AS createdAt, updated_at AS updatedAt
     FROM events
@@ -107,7 +108,7 @@ async function listAll() {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.starts_at AS startsAt, e.status, e.token,
+           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -135,7 +136,7 @@ async function findById(eventId) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.starts_at AS startsAt, e.status, e.token,
+           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -164,7 +165,7 @@ async function findByToken(token) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-           e.name, e.starts_at AS startsAt, e.status, e.token,
+           e.name, e.description, e.starts_at AS startsAt, e.status, e.token,
            e.created_at AS createdAt, e.updated_at AS updatedAt
     FROM events e
     INNER JOIN users u ON u.id = e.owner_user_id
@@ -175,7 +176,7 @@ async function findByToken(token) {
   return normalizeRow(rows[0]);
 }
 
-async function createEvent({ ownerUserId, name, startsAt, status = 'inactive', token }) {
+async function createEvent({ ownerUserId, name, description = '', startsAt, status = 'inactive', token }) {
   const eventToken = token || await generateUniqueToken();
   const eventUuid = crypto.randomUUID();
 
@@ -192,6 +193,7 @@ async function createEvent({ ownerUserId, name, startsAt, status = 'inactive', t
       uuid: eventUuid,
       ownerUserId: Number(ownerUserId),
       name,
+      description,
       startsAt,
       status,
       token: eventToken,
@@ -206,9 +208,9 @@ async function createEvent({ ownerUserId, name, startsAt, status = 'inactive', t
 
   try {
     const [result] = await pool.query(`
-      INSERT INTO events (uuid, owner_user_id, name, starts_at, status, token)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [eventUuid, ownerUserId, name, startsAt, status, eventToken]);
+      INSERT INTO events (uuid, owner_user_id, name, description, starts_at, status, token)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [eventUuid, ownerUserId, name, description, startsAt, status, eventToken]);
 
     return findById(result.insertId);
   } catch (err) {
@@ -231,6 +233,7 @@ async function updateEvent(eventId, payload) {
   const nextData = {
     ownerUserId: payload.ownerUserId || current.ownerUserId,
     name: payload.name || current.name,
+    description: payload.description !== undefined ? payload.description : current.description,
     startsAt: payload.startsAt || current.startsAt,
     status: payload.status || current.status,
     token: payload.token || current.token,
@@ -263,9 +266,9 @@ async function updateEvent(eventId, payload) {
   try {
     await pool.query(`
       UPDATE events
-      SET owner_user_id = ?, name = ?, starts_at = ?, status = ?, token = ?, updated_at = CURRENT_TIMESTAMP
+      SET owner_user_id = ?, name = ?, description = ?, starts_at = ?, status = ?, token = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [nextData.ownerUserId, nextData.name, nextData.startsAt, nextData.status, nextData.token, current.id]);
+    `, [nextData.ownerUserId, nextData.name, nextData.description, nextData.startsAt, nextData.status, nextData.token, current.id]);
 
     return findById(current.id);
   } catch (err) {

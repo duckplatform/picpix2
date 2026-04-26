@@ -121,6 +121,9 @@ const eventValidators = [
   body('name')
     .trim()
     .isLength({ min: 3, max: 180 }).withMessage('Le nom de l\'evenement doit contenir entre 3 et 180 caracteres.'),
+  body('description')
+    .trim()
+    .isLength({ min: 10, max: 5000 }).withMessage('La description doit contenir entre 10 et 5000 caracteres.'),
   body('startsAt')
     .trim()
     .notEmpty().withMessage('La date/heure de l\'evenement est requise.')
@@ -135,11 +138,29 @@ const adminEventValidators = [
   body('ownerUserId')
     .trim()
     .isInt({ min: 1 }).withMessage('Proprietaire invalide.'),
-  body('token')
-    .optional({ values: 'falsy' })
-    .trim()
-    .matches(/^[A-Za-z0-9]{10}$/).withMessage('Le token doit contenir 10 caracteres alphanumeriques.'),
 ];
+
+function toDateTimeLocal(value) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toISOString().slice(0, 16);
+}
+
+async function findOwnedEvent(userId, eventId) {
+  const eventItem = await eventStore.findById(eventId);
+  if (!eventItem || eventItem.ownerUserId !== Number(userId)) {
+    return null;
+  }
+
+  return eventItem;
+}
 
 async function renderProfile(req, res, payload = {}, status = 200) {
   const events = await eventStore.listByOwner(req.currentUser.id);
@@ -150,6 +171,29 @@ async function renderProfile(req, res, payload = {}, status = 200) {
     formData: {
       fullName: req.currentUser.fullName,
       eventStatus: 'inactive',
+      ...payload.formData,
+    },
+    ...payload,
+  }, status);
+}
+
+function renderEventNotFound(res) {
+  return res.status(404).render('errors/404', {
+    title: 'Evenement introuvable',
+    pageClass: 'page-error',
+  });
+}
+
+function renderProfileEventForm(req, res, eventItem, payload = {}, status = 200) {
+  return renderView(res, 'profile-event-form', {
+    title: 'Modifier evenement',
+    pageClass: 'page-profile',
+    editingEvent: eventItem,
+    formData: {
+      name: eventItem.name,
+      description: eventItem.description,
+      startsAt: toDateTimeLocal(eventItem.startsAt),
+      status: eventItem.status,
       ...payload.formData,
     },
     ...payload,
@@ -181,10 +225,20 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
       });
     }
 
+    const now = new Date();
+    const startsAtDate = new Date(eventItem.startsAt);
+    const hasValidStartDate = !Number.isNaN(startsAtDate.getTime());
+    const shouldShowCountdown = eventItem.status !== 'active'
+      && hasValidStartDate
+      && startsAtDate.getTime() > now.getTime();
+
     return renderView(res, 'event', {
       title: eventItem.name,
       pageClass: 'page-event',
       eventItem,
+      nowIso: new Date().toISOString(),
+      eventStartsAtIso: hasValidStartDate ? startsAtDate.toISOString() : null,
+      shouldShowCountdown,
     });
   } catch (err) {
     return next(err);
@@ -347,12 +401,145 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
     await eventStore.createEvent({
       ownerUserId: req.currentUser.id,
       name: req.body.name,
+      description: req.body.description,
       startsAt: req.body.startsAt,
       status: req.body.status,
     });
 
     logger.info(`[EVENT] ${req.currentUser.email} a cree l'evenement ${req.body.name}`);
     req.flash('success', 'Evenement cree avec succes.');
+    return res.redirect('/profile');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.get('/profile/events/:id/edit', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    return renderProfileEventForm(req, res, editingEvent);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), eventValidators, async (req, res, next) => {
+  const eventId = Number(req.params.id);
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    try {
+      const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+      if (!editingEvent) {
+        return renderEventNotFound(res);
+      }
+
+      return renderProfileEventForm(req, res, editingEvent, {
+        formData: req.body,
+        fieldErrors: collectFieldErrors(result),
+      }, 422);
+    } catch (err) {
+      return next(err);
+    }
+  }
+
+  try {
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    await eventStore.updateEvent(eventId, {
+      name: req.body.name,
+      description: req.body.description,
+      startsAt: req.body.startsAt,
+      status: req.body.status,
+    });
+
+    logger.info(`[EVENT] ${req.currentUser.email} a mis a jour son evenement ${editingEvent.uuid}`);
+    req.flash('success', 'Evenement mis a jour.');
+    return res.redirect('/profile');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/profile/events/:id/activate', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    if (editingEvent.status !== 'active') {
+      await eventStore.updateEvent(eventId, { status: 'active' });
+      logger.info(`[EVENT] ${req.currentUser.email} a active son evenement ${editingEvent.uuid}`);
+      req.flash('success', 'Evenement active.');
+    } else {
+      req.flash('success', 'Evenement deja actif.');
+    }
+
+    return res.redirect('/profile');
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.post('/profile/events/:id/regenerate-token', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    const newToken = await eventStore.generateUniqueToken();
+    await eventStore.updateEvent(eventId, { token: newToken });
+
+    logger.info(`[EVENT] ${req.currentUser.email} a regenere le token de ${editingEvent.uuid}`);
+    req.flash('success', 'Token regenere avec succes.');
+    return res.redirect(`/profile/events/${eventId}/edit`);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+router.delete('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await findOwnedEvent(req.currentUser.id, eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
+    }
+
+    await eventStore.deleteEvent(eventId);
+    logger.info(`[EVENT] ${req.currentUser.email} a supprime son evenement ${editingEvent.uuid}`);
+    req.flash('success', 'Evenement supprime.');
     return res.redirect('/profile');
   } catch (err) {
     return next(err);
@@ -413,32 +600,15 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
     await eventStore.createEvent({
       ownerUserId: Number(req.body.ownerUserId),
       name: req.body.name,
+      description: req.body.description,
       startsAt: req.body.startsAt,
       status: req.body.status,
-      token: req.body.token || undefined,
     });
 
     logger.info(`[ADMIN] ${req.currentUser.email} a cree un evenement (${req.body.name})`);
     req.flash('success', 'Evenement cree avec succes.');
     return res.redirect('/admin');
   } catch (err) {
-    if (err.code === 'EVENT_UNIQUE_CONSTRAINT') {
-      try {
-        const users = await userStore.listUsers();
-        return renderView(res, 'admin/event-form', {
-          title: 'Nouvel evenement',
-          pageClass: 'page-admin',
-          mode: 'create',
-          users,
-          editingEvent: null,
-          formData: req.body,
-          fieldErrors: { token: 'Token deja utilise, veuillez en choisir un autre.' },
-        }, 409);
-      } catch (viewErr) {
-        return next(viewErr);
-      }
-    }
-
     return next(err);
   }
 });
@@ -503,9 +673,9 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
     const updated = await eventStore.updateEvent(eventId, {
       ownerUserId: Number(req.body.ownerUserId),
       name: req.body.name,
+      description: req.body.description,
       startsAt: req.body.startsAt,
       status: req.body.status,
-      token: req.body.token || undefined,
     });
 
     if (!updated) {
@@ -519,24 +689,30 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
     req.flash('success', 'Evenement mis a jour.');
     return res.redirect('/admin');
   } catch (err) {
-    if (err.code === 'EVENT_UNIQUE_CONSTRAINT') {
-      try {
-        const users = await userStore.listUsers();
-        const editingEvent = await eventStore.findById(eventId);
-        return renderView(res, 'admin/event-form', {
-          title: 'Modifier evenement',
-          pageClass: 'page-admin',
-          mode: 'edit',
-          users,
-          editingEvent,
-          formData: { ...req.body, id: eventId },
-          fieldErrors: { token: 'Token deja utilise, veuillez en choisir un autre.' },
-        }, 409);
-      } catch (viewErr) {
-        return next(viewErr);
-      }
+    return next(err);
+  }
+});
+
+router.post('/admin/events/:id/regenerate-token', requireAdmin, param('id').isInt({ min: 1 }), async (req, res, next) => {
+  const result = validationResult(req);
+  if (!result.isEmpty()) {
+    return renderEventNotFound(res);
+  }
+
+  try {
+    const eventId = Number(req.params.id);
+    const editingEvent = await eventStore.findById(eventId);
+    if (!editingEvent) {
+      return renderEventNotFound(res);
     }
 
+    const newToken = await eventStore.generateUniqueToken();
+    await eventStore.updateEvent(eventId, { token: newToken });
+
+    logger.info(`[ADMIN] ${req.currentUser.email} a regenere le token de l'evenement ${editingEvent.uuid}`);
+    req.flash('success', 'Token regenere avec succes.');
+    return res.redirect(`/admin/events/${eventId}/edit`);
+  } catch (err) {
     return next(err);
   }
 });

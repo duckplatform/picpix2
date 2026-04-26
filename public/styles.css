@@ -235,10 +235,42 @@ select {
   color: var(--text);
 }
 
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font: inherit;
+  color: var(--text);
+  resize: vertical;
+  min-height: 120px;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid rgba(15, 118, 110, 0.2);
   border-color: var(--primary);
+}
+
+.countdown-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.countdown-screen,
+.welcome-screen {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.countdown-value {
+  font-size: clamp(1.6rem, 3.2vw, 2.8rem);
+  font-weight: 800;
+  color: var(--primary);
 }
 
 .field-error {

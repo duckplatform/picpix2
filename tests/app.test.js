@@ -45,12 +45,13 @@ describe('Tests applicatifs HTTP', () => {
       expect(res.text).to.include('La page demandee est introuvable');
     });
 
-    it('GET /event/:token affiche la page evenement si le token existe', async () => {
+    it('GET /event/:token affiche le bienvenue si l\'evenement est actif avant l\'heure', async () => {
       const owner = await userStore.findByEmail('admin@example.com');
       const createdEvent = await eventStore.createEvent({
         ownerUserId: owner.id,
         name: 'Concert Public',
-        startsAt: '2026-09-20T20:00',
+        description: 'Grand concert public en plein air.',
+        startsAt: '2099-09-20T20:00',
         status: 'active',
       });
 
@@ -58,7 +59,26 @@ describe('Tests applicatifs HTTP', () => {
 
       expect(res.status).to.equal(200);
       expect(res.text).to.include('Concert Public');
-      expect(res.text).to.include(createdEvent.token);
+      expect(res.text).to.include('Grand concert public en plein air.');
+      expect(res.text).to.include('id="countdownScreen" class="countdown-screen" aria-live="polite" hidden');
+      expect(res.text).to.include('id="welcomeScreen" class="welcome-screen" aria-live="polite" >');
+    });
+
+    it('GET /event/:token affiche le chrono si l\'evenement n\'a pas commence', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Lancement Produit',
+        description: 'Ouverture des portes dans quelques heures.',
+        startsAt: '2099-12-31T23:59:00',
+        status: 'inactive',
+      });
+
+      const res = await request(app).get(`/event/${createdEvent.token}`);
+
+      expect(res.status).to.equal(200);
+      expect(res.text).to.include('id="countdownScreen" class="countdown-screen" aria-live="polite" >');
+      expect(res.text).to.include('id="welcomeScreen" class="welcome-screen" aria-live="polite" hidden');
     });
 
     it('GET /event/:token retourne 404 si le token est inconnu', async () => {
@@ -178,6 +198,7 @@ describe('Tests applicatifs HTTP', () => {
         .send({
           _csrf: profileCsrf,
           name: 'Festival Printemps',
+          description: 'Festival culturel et musical du printemps.',
           startsAt: '2026-05-01T19:30',
           status: 'active',
         });
@@ -195,6 +216,105 @@ describe('Tests applicatifs HTTP', () => {
       expect(events[0].uuid).to.match(/^[0-9a-f-]{36}$/i);
       expect(events[0].token).to.match(/^[A-Za-z0-9]{10}$/);
       expect(events[0].status).to.equal('active');
+      expect(events[0].description).to.equal('Festival culturel et musical du printemps.');
+    });
+
+    it('permet a un utilisateur d\'activer, modifier, regenerer le token et supprimer son evenement', async () => {
+      const agent = request.agent(app);
+      const registerPage = await agent.get('/register');
+      const registerCsrf = extractCsrfToken(registerPage.text);
+
+      await agent
+        .post('/register')
+        .type('form')
+        .send({
+          _csrf: registerCsrf,
+          fullName: 'Nina Event',
+          email: 'nina@example.com',
+          password: 'SecurePass123',
+          confirmPassword: 'SecurePass123',
+        })
+        .expect(302);
+
+      const profilePage = await agent.get('/profile');
+      const profileCsrf = extractCsrfToken(profilePage.text);
+
+      await agent
+        .post('/profile/events')
+        .type('form')
+        .send({
+          _csrf: profileCsrf,
+          name: 'Atelier Photo',
+          description: 'Atelier photo pour debutants et passionnes.',
+          startsAt: '2026-07-01T14:00',
+          status: 'inactive',
+        })
+        .expect(302);
+
+      const owner = await userStore.findByEmail('nina@example.com');
+      const events = await eventStore.listByOwner(owner.id);
+      expect(events).to.have.lengthOf(1);
+      const createdEvent = events[0];
+      const oldToken = createdEvent.token;
+
+      const refreshedProfile = await agent.get('/profile');
+      const refreshedCsrf = extractCsrfToken(refreshedProfile.text);
+
+      await agent
+        .post(`/profile/events/${createdEvent.id}/activate`)
+        .type('form')
+        .send({ _csrf: refreshedCsrf })
+        .expect(302);
+
+      const activeEvent = await eventStore.findById(createdEvent.id);
+      expect(activeEvent.status).to.equal('active');
+
+      const editPage = await agent.get(`/profile/events/${createdEvent.id}/edit`);
+      expect(editPage.status).to.equal(200);
+      expect(editPage.text).to.include('Modifier un evenement');
+      const editCsrf = extractCsrfToken(editPage.text);
+
+      await agent
+        .post(`/profile/events/${createdEvent.id}?_method=PUT`)
+        .type('form')
+        .send({
+          _csrf: editCsrf,
+          name: 'Atelier Photo Pro',
+          description: 'Atelier photo avance avec session pratique.',
+          startsAt: '2026-07-02T15:30',
+          status: 'inactive',
+        })
+        .expect(302);
+
+      const updatedEvent = await eventStore.findById(createdEvent.id);
+      expect(updatedEvent.name).to.equal('Atelier Photo Pro');
+      expect(updatedEvent.description).to.equal('Atelier photo avance avec session pratique.');
+      expect(updatedEvent.status).to.equal('inactive');
+
+      const tokenPage = await agent.get(`/profile/events/${createdEvent.id}/edit`);
+      const tokenCsrf = extractCsrfToken(tokenPage.text);
+
+      await agent
+        .post(`/profile/events/${createdEvent.id}/regenerate-token`)
+        .type('form')
+        .send({ _csrf: tokenCsrf })
+        .expect(302);
+
+      const regeneratedEvent = await eventStore.findById(createdEvent.id);
+      expect(regeneratedEvent.token).to.match(/^[A-Za-z0-9]{10}$/);
+      expect(regeneratedEvent.token).to.not.equal(oldToken);
+
+      const deletePage = await agent.get('/profile');
+      const deleteCsrf = extractCsrfToken(deletePage.text);
+
+      await agent
+        .post(`/profile/events/${createdEvent.id}?_method=DELETE`)
+        .type('form')
+        .send({ _csrf: deleteCsrf })
+        .expect(302);
+
+      const eventsAfterDelete = await eventStore.listByOwner(owner.id);
+      expect(eventsAfterDelete).to.have.lengthOf(0);
     });
   });
 
@@ -312,9 +432,9 @@ describe('Tests applicatifs HTTP', () => {
           _csrf: createCsrf,
           ownerUserId: String(adminUser.id),
           name: 'Soiree Admin',
+          description: 'Soiree privee pour les administrateurs.',
           startsAt: '2026-06-10T20:00',
           status: 'inactive',
-          token: '',
         });
 
       expect(createResponse.status).to.equal(302);
@@ -324,6 +444,7 @@ describe('Tests applicatifs HTTP', () => {
       expect(eventsAfterCreate).to.have.lengthOf(1);
       const createdEvent = eventsAfterCreate[0];
       expect(createdEvent.name).to.equal('Soiree Admin');
+      expect(createdEvent.description).to.equal('Soiree privee pour les administrateurs.');
 
       const editPage = await agent.get(`/admin/events/${createdEvent.id}/edit`);
       const editCsrf = extractCsrfToken(editPage.text);
@@ -335,9 +456,9 @@ describe('Tests applicatifs HTTP', () => {
           _csrf: editCsrf,
           ownerUserId: String(adminUser.id),
           name: 'Soiree Admin VIP',
+          description: 'Version VIP avec acces reserve.',
           startsAt: '2026-06-10T21:00',
           status: 'active',
-          token: createdEvent.token,
         });
 
       expect(updateResponse.status).to.equal(302);
@@ -346,6 +467,24 @@ describe('Tests applicatifs HTTP', () => {
       const adminPage = await agent.get('/admin');
       expect(adminPage.status).to.equal(200);
       expect(adminPage.text).to.include('Soiree Admin VIP');
+
+      const beforeRegen = await eventStore.findById(createdEvent.id);
+      const regenPage = await agent.get(`/admin/events/${createdEvent.id}/edit`);
+      const regenCsrf = extractCsrfToken(regenPage.text);
+
+      const regenResponse = await agent
+        .post(`/admin/events/${createdEvent.id}/regenerate-token`)
+        .type('form')
+        .send({
+          _csrf: regenCsrf,
+        });
+
+      expect(regenResponse.status).to.equal(302);
+      expect(regenResponse.headers.location).to.equal(`/admin/events/${createdEvent.id}/edit`);
+
+      const afterRegen = await eventStore.findById(createdEvent.id);
+      expect(afterRegen.token).to.match(/^[A-Za-z0-9]{10}$/);
+      expect(afterRegen.token).to.not.equal(beforeRegen.token);
 
       const deleteCsrf = extractCsrfToken(adminPage.text);
       const deleteResponse = await agent

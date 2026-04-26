@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
 	uuid CHAR(36) NOT NULL,
 	owner_user_id BIGINT UNSIGNED NOT NULL,
 	name VARCHAR(180) NOT NULL,
+	description TEXT NOT NULL,
 	starts_at DATETIME NOT NULL,
 	status ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
 	token CHAR(10) NOT NULL,

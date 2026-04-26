@@ -69,6 +69,12 @@
       </label>
 
       <label>
+        <span>Description</span>
+        <textarea name="description" required minlength="10" maxlength="5000" rows="5"><%= formData.description || '' %></textarea>
+        <% if (fieldErrors.description) { %><small class="field-error"><%= fieldErrors.description %></small><% } %>
+      </label>
+
+      <label>
         <span>Date et heure</span>
         <input type="datetime-local" name="startsAt" value="<%= formData.startsAt || '' %>" required />
         <% if (fieldErrors.startsAt) { %><small class="field-error"><%= fieldErrors.startsAt %></small><% } %>
@@ -97,21 +103,33 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>UUID</th>
               <th>Nom</th>
               <th>Date/heure</th>
               <th>Statut</th>
-              <th>Token</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <% userEvents.forEach((eventItem) => { %>
               <tr>
-                <td><code><%= eventItem.uuid %></code></td>
                 <td><%= eventItem.name %></td>
                 <td><%= new Date(eventItem.startsAt).toLocaleString('fr-FR') %></td>
                 <td><span class="badge badge-<%= eventItem.status %>"><%= eventItem.status %></span></td>
-                <td><code><%= eventItem.token %></code></td>
+                <td>
+                  <div class="table-actions">
+                    <% if (eventItem.status !== 'active') { %>
+                      <form method="post" action="/profile/events/<%= eventItem.id %>/activate" class="inline-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                        <button class="btn btn-secondary btn-small" type="submit">Activer</button>
+                      </form>
+                    <% } %>
+                    <a class="btn btn-secondary btn-small" href="/profile/events/<%= eventItem.id %>/edit">Modifier</a>
+                    <form method="post" action="/profile/events/<%= eventItem.id %>?_method=DELETE" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button class="btn btn-danger btn-small" type="submit">Supprimer</button>
+                    </form>
+                  </div>
+                </td>
               </tr>
             <% }) %>
           </tbody>

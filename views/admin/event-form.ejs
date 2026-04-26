@@ -4,23 +4,39 @@
   <div>
     <p class="eyebrow">Administration</p>
     <h1><%= mode === 'create' ? 'Creer un evenement' : 'Modifier un evenement' %></h1>
-    <p>Definir UUID, nom, date/heure, statut, proprietaire et token de l'evenement.</p>
+    <p>Renseigner uniquement les champs metier utiles de l'evenement.</p>
   </div>
+
+  <% if (mode === 'edit') { %>
+    <div class="definition-list">
+      <div>
+        <dt>UUID</dt>
+        <dd><code><%= editingEvent.uuid %></code></dd>
+      </div>
+      <div>
+        <dt>Token</dt>
+        <dd><code><%= editingEvent.token %></code></dd>
+      </div>
+    </div>
+    <form method="post" action="/admin/events/<%= editingEvent.id %>/regenerate-token" class="inline-form section-gap">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button class="btn btn-secondary" type="submit">Regenerer le token</button>
+    </form>
+  <% } %>
 
   <form method="post" action="<%= mode === 'create' ? '/admin/events' : `/admin/events/${editingEvent.id}?_method=PUT` %>" class="form-grid">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-
-    <% if (mode === 'edit') { %>
-      <label>
-        <span>UUID</span>
-        <input type="text" value="<%= editingEvent.uuid %>" readonly />
-      </label>
-    <% } %>
 
     <label>
       <span>Nom de l'evenement</span>
       <input type="text" name="name" value="<%= formData.name || '' %>" required maxlength="180" />
       <% if (fieldErrors.name) { %><small class="field-error"><%= fieldErrors.name %></small><% } %>
+    </label>
+
+    <label>
+      <span>Description</span>
+      <textarea name="description" required minlength="10" maxlength="5000" rows="6"><%= formData.description || '' %></textarea>
+      <% if (fieldErrors.description) { %><small class="field-error"><%= fieldErrors.description %></small><% } %>
     </label>
 
     <label>
@@ -48,12 +64,6 @@
         <option value="active" <%= formData.status === 'active' ? 'selected' : '' %>>active</option>
       </select>
       <% if (fieldErrors.status) { %><small class="field-error"><%= fieldErrors.status %></small><% } %>
-    </label>
-
-    <label>
-      <span>Token (10 caracteres alphanumeriques)</span>
-      <input type="text" name="token" value="<%= formData.token || '' %>" maxlength="10" pattern="[A-Za-z0-9]{10}" />
-      <% if (fieldErrors.token) { %><small class="field-error"><%= fieldErrors.token %></small><% } %>
     </label>
 
     <button class="btn" type="submit"><%= mode === 'create' ? 'Creer evenement' : 'Mettre a jour evenement' %></button>
