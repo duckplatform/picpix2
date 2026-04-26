@@ -90,6 +90,18 @@
       </label>
 
       <label>
+        <span>Theme visuel</span>
+        <select name="theme" required>
+          <% eventThemeOptions.forEach((themeItem) => { %>
+            <option value="<%= themeItem.key %>" <%= (formData.theme || 'classic') === themeItem.key ? 'selected' : '' %>>
+              <%= themeItem.icon %> <%= themeItem.label %>
+            </option>
+          <% }) %>
+        </select>
+        <% if (fieldErrors.theme) { %><small class="field-error"><%= fieldErrors.theme %></small><% } %>
+      </label>
+
+      <label>
         <span>Source des photos</span>
         <select name="uploadSourceMode" required>
           <option value="default" <%= (formData.uploadSourceMode || 'default') === 'default' ? 'selected' : '' %>>Defaut</option>

@@ -129,6 +129,23 @@ body {
   letter-spacing: 0.01em;
 }
 
+.event-theme-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  margin-right: 8px;
+  background: rgba(15, 118, 110, 0.16);
+  font-size: 0.95rem;
+  vertical-align: middle;
+}
+
+.event-theme-title {
+  vertical-align: middle;
+}
+
 .event-user-chip {
   display: inline-flex;
   align-items: center;
@@ -778,6 +795,156 @@ textarea:focus {
   display: block;
 }
 
+/* ── Themes: pages evenement /event/:token/* ─────────────────── */
+.page-event.event-theme-classic {
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --secondary: #f5b700;
+  --secondary-hover: #d99900;
+  --border: #d6d3cb;
+  --card: #fffdf8;
+  background:
+    radial-gradient(circle at top left, rgba(245, 183, 0, 0.22), transparent 22%),
+    linear-gradient(180deg, #e7f5f2 0%, #f2efe8 42%);
+}
+
+.page-event.event-theme-wedding {
+  --primary: #a61e4d;
+  --primary-hover: #8f1942;
+  --secondary: #f7d6e0;
+  --secondary-hover: #efbfd0;
+  --border: #ecd3dc;
+  --card: #fffafc;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 215, 232, 0.6), transparent 34%),
+    radial-gradient(circle at 88% 8%, rgba(255, 240, 244, 0.8), transparent 28%),
+    linear-gradient(180deg, #fff6fa 0%, #fff0f5 46%, #fdeff3 100%);
+}
+
+.page-event.event-theme-gaming {
+  --primary: #22d3ee;
+  --primary-hover: #06b6d4;
+  --secondary: #facc15;
+  --secondary-hover: #eab308;
+  --border: #1f3042;
+  --card: #0d1724;
+  --text: #e6f4ff;
+  --muted: #a2bacd;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(34, 211, 238, 0.22), transparent 24%),
+    radial-gradient(circle at 90% 90%, rgba(250, 204, 21, 0.18), transparent 22%),
+    linear-gradient(180deg, #08101c 0%, #060b14 100%);
+}
+
+.page-event.event-theme-cinema {
+  --primary: #d4af37;
+  --primary-hover: #b89428;
+  --secondary: #f8e8aa;
+  --secondary-hover: #efd98d;
+  --border: #3a3132;
+  --card: #181315;
+  --text: #f3ece4;
+  --muted: #d1c0ac;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(212, 175, 55, 0.22), transparent 26%),
+    linear-gradient(180deg, #110d0f 0%, #1c1518 40%, #150f12 100%);
+}
+
+.page-event.event-theme-halloween {
+  --primary: #f97316;
+  --primary-hover: #ea580c;
+  --secondary: #facc15;
+  --secondary-hover: #eab308;
+  --border: #4a2f18;
+  --card: #1b120d;
+  --text: #ffedd5;
+  --muted: #f4c8a1;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(249, 115, 22, 0.24), transparent 24%),
+    radial-gradient(circle at 84% 80%, rgba(124, 58, 237, 0.18), transparent 20%),
+    linear-gradient(180deg, #0f0a08 0%, #180f0b 100%);
+}
+
+.page-event.event-theme-christmas {
+  --primary: #15803d;
+  --primary-hover: #166534;
+  --secondary: #d4af37;
+  --secondary-hover: #c49a27;
+  --border: #b8d5c0;
+  --card: #f7fff9;
+  background:
+    radial-gradient(circle at 12% 15%, rgba(21, 128, 61, 0.24), transparent 24%),
+    radial-gradient(circle at 88% 10%, rgba(212, 175, 55, 0.2), transparent 24%),
+    linear-gradient(180deg, #eefbf1 0%, #f7fff8 50%, #eaf6ee 100%);
+}
+
+.page-event.event-theme-tropical {
+  --primary: #0f766e;
+  --primary-hover: #0f5f59;
+  --secondary: #f59e0b;
+  --secondary-hover: #d97706;
+  --border: #b9e2d5;
+  --card: #f3fffb;
+  background:
+    radial-gradient(circle at 6% 15%, rgba(16, 185, 129, 0.22), transparent 23%),
+    radial-gradient(circle at 88% 72%, rgba(14, 165, 233, 0.2), transparent 21%),
+    linear-gradient(180deg, #ecfeff 0%, #f0fdf4 100%);
+}
+
+.page-event.event-theme-corporate {
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
+  --secondary: #94a3b8;
+  --secondary-hover: #7f90a8;
+  --border: #c8d2e2;
+  --card: #f8fbff;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(29, 78, 216, 0.16), transparent 22%),
+    linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%);
+}
+
+.page-event.event-theme-neonparty {
+  --primary: #f43f5e;
+  --primary-hover: #e11d48;
+  --secondary: #22d3ee;
+  --secondary-hover: #06b6d4;
+  --border: #3b225c;
+  --card: #180c24;
+  --text: #f7eefe;
+  --muted: #e6d6f7;
+  background:
+    radial-gradient(circle at 14% 12%, rgba(244, 63, 94, 0.23), transparent 24%),
+    radial-gradient(circle at 90% 80%, rgba(34, 211, 238, 0.19), transparent 24%),
+    linear-gradient(180deg, #0f0718 0%, #1a0f2a 100%);
+}
+
+.page-event[class*='event-theme-'] .site-header {
+  background: rgba(8, 12, 18, 0.62);
+  border-bottom-color: rgba(255, 255, 255, 0.14);
+}
+
+.page-event[class*='event-theme-'] .event-brand,
+.page-event[class*='event-theme-'] .nav-links a,
+.page-event[class*='event-theme-'] .event-user-name {
+  color: var(--text);
+}
+
+.page-event[class*='event-theme-'] .nav-links-event a,
+.page-event[class*='event-theme-'] .event-user-chip,
+.page-event[class*='event-theme-'] .event-theme-icon {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.page-event[class*='event-theme-'] .hero,
+.page-event[class*='event-theme-'] .card,
+.page-event[class*='event-theme-'] .event-gallery-card {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+}
+
+.page-event[class*='event-theme-'] .dropzone-host {
+  background: color-mix(in srgb, var(--card) 84%, transparent);
+}
+
 .event-gallery-meta {
   padding: 8px;
   display: grid;
@@ -808,9 +975,27 @@ textarea:focus {
 
 /* ── Slideshow plein écran ─────────────────────────── */
 .slideshow-fullscreen-body {
+  --slideshow-bg:
+    radial-gradient(circle at 18% 18%, #1b262f 0%, #0a0d10 46%, #050507 100%);
+  --slideshow-panel-bg: linear-gradient(140deg, rgba(4, 8, 13, 0.74), rgba(4, 8, 13, 0.35));
+  --slideshow-panel-border: rgba(255, 255, 255, 0.2);
+  --slideshow-pill-color: rgba(219, 234, 254, 0.88);
+  --slideshow-title-color: #fff;
+  --slideshow-caption-bg: rgba(3, 7, 12, 0.55);
+  --slideshow-caption-border: rgba(255, 255, 255, 0.15);
+  --slideshow-caption-color: rgba(235, 238, 242, 0.92);
+  --slideshow-waiting-bg: rgba(5, 10, 15, 0.54);
+  --slideshow-waiting-border: rgba(255, 255, 255, 0.2);
+  --slideshow-waiting-color: rgba(234, 238, 243, 0.86);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 58%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0.28) 72%, rgba(0, 0, 0, 0.62) 100%),
+    linear-gradient(180deg, rgba(2, 6, 11, 0.4) 0%, rgba(2, 6, 11, 0) 26%, rgba(2, 6, 11, 0.34) 100%);
+  --slideshow-atmosphere:
+    radial-gradient(circle at 22% 16%, rgba(255, 255, 255, 0.08), transparent 30%),
+    radial-gradient(circle at 78% 84%, rgba(255, 255, 255, 0.05), transparent 30%);
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at 18% 18%, #1b262f 0%, #0a0d10 46%, #050507 100%);
+  background: var(--slideshow-bg);
   overflow: hidden;
   font-family: 'Avenir Next', 'Segoe UI', sans-serif;
 }
@@ -833,9 +1018,9 @@ textarea:focus {
   display: grid;
   gap: 8px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--slideshow-panel-border);
   border-radius: 16px;
-  background: linear-gradient(140deg, rgba(4, 8, 13, 0.74), rgba(4, 8, 13, 0.35));
+  background: var(--slideshow-panel-bg);
   backdrop-filter: blur(8px);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35);
 }
@@ -844,13 +1029,13 @@ textarea:focus {
   font-size: 0.68rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(219, 234, 254, 0.88);
+  color: var(--slideshow-pill-color);
 }
 
 .slideshow-event-name {
   margin: 0;
   max-width: min(72vw, 980px);
-  color: #fff;
+  color: var(--slideshow-title-color);
   font-size: clamp(1rem, 2vw, 1.7rem);
   line-height: 1.2;
   letter-spacing: 0.02em;
@@ -862,22 +1047,20 @@ textarea:focus {
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background:
-    radial-gradient(circle at 50% 58%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0.28) 72%, rgba(0, 0, 0, 0.62) 100%),
-    linear-gradient(180deg, rgba(2, 6, 11, 0.4) 0%, rgba(2, 6, 11, 0) 26%, rgba(2, 6, 11, 0.34) 100%);
+  background: var(--slideshow-atmosphere), var(--slideshow-vignette);
 }
 
 .slideshow-waiting {
   z-index: 2;
-  color: rgba(234, 238, 243, 0.86);
+  color: var(--slideshow-waiting-color);
   font-size: clamp(1rem, 2.2vw, 1.5rem);
   font-weight: 600;
   text-align: center;
   max-width: min(80vw, 1100px);
   padding: 22px 30px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(5, 10, 15, 0.54);
+  border: 1px solid var(--slideshow-waiting-border);
+  background: var(--slideshow-waiting-bg);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
 }
 
@@ -904,7 +1087,7 @@ textarea:focus {
 }
 
 .slideshow-caption {
-  color: rgba(235, 238, 242, 0.92);
+  color: var(--slideshow-caption-color);
   font-size: clamp(0.84rem, 1.2vw, 1rem);
   font-weight: 500;
   letter-spacing: 0.01em;
@@ -915,8 +1098,125 @@ textarea:focus {
   text-overflow: ellipsis;
   max-width: min(92vw, 1000px);
   border-radius: 999px;
-  background: rgba(3, 7, 12, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--slideshow-caption-bg);
+  border: 1px solid var(--slideshow-caption-border);
+}
+
+.slideshow-fullscreen-body.event-theme-wedding {
+  --slideshow-bg:
+    radial-gradient(circle at 18% 10%, rgba(237, 160, 195, 0.5), transparent 30%),
+    linear-gradient(180deg, #fff7fb 0%, #ffeef6 46%, #f7dce9 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(175, 46, 95, 0.75), rgba(120, 26, 63, 0.52));
+  --slideshow-pill-color: #ffd9e8;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.2), transparent 34%),
+    radial-gradient(circle at 80% 70%, rgba(255, 209, 227, 0.2), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(255, 255, 255, 0) 35%, rgba(113, 45, 77, 0.22) 74%, rgba(73, 22, 46, 0.48) 100%),
+    linear-gradient(180deg, rgba(132, 26, 73, 0.2) 0%, rgba(132, 26, 73, 0.02) 36%, rgba(132, 26, 73, 0.22) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-gaming {
+  --slideshow-bg:
+    radial-gradient(circle at 14% 10%, rgba(34, 211, 238, 0.26), transparent 28%),
+    radial-gradient(circle at 88% 84%, rgba(250, 204, 21, 0.2), transparent 25%),
+    linear-gradient(180deg, #050b14 0%, #090f1f 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(4, 20, 35, 0.86), rgba(17, 41, 70, 0.62));
+  --slideshow-pill-color: #9be8ff;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 16% 18%, rgba(34, 211, 238, 0.18), transparent 32%),
+    radial-gradient(circle at 84% 76%, rgba(250, 204, 21, 0.16), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 34%, rgba(3, 40, 63, 0.28) 72%, rgba(2, 13, 25, 0.64) 100%),
+    linear-gradient(180deg, rgba(7, 25, 43, 0.35) 0%, rgba(7, 25, 43, 0.03) 28%, rgba(7, 25, 43, 0.4) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-cinema {
+  --slideshow-bg:
+    radial-gradient(circle at 15% 8%, rgba(212, 175, 55, 0.22), transparent 24%),
+    linear-gradient(180deg, #0d0a0b 0%, #1a1213 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(42, 27, 11, 0.84), rgba(28, 16, 8, 0.66));
+  --slideshow-pill-color: #ffe5a3;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 20% 10%, rgba(212, 175, 55, 0.16), transparent 32%),
+    radial-gradient(circle at 78% 80%, rgba(255, 225, 157, 0.1), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 33%, rgba(69, 52, 24, 0.26) 72%, rgba(21, 14, 7, 0.66) 100%),
+    linear-gradient(180deg, rgba(39, 28, 13, 0.35) 0%, rgba(39, 28, 13, 0.02) 30%, rgba(39, 28, 13, 0.42) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-halloween {
+  --slideshow-bg:
+    radial-gradient(circle at 16% 8%, rgba(249, 115, 22, 0.28), transparent 24%),
+    radial-gradient(circle at 82% 82%, rgba(168, 85, 247, 0.2), transparent 24%),
+    linear-gradient(180deg, #090708 0%, #140c0b 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(83, 35, 10, 0.82), rgba(48, 20, 8, 0.67));
+  --slideshow-pill-color: #ffd7ad;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 16% 14%, rgba(249, 115, 22, 0.2), transparent 30%),
+    radial-gradient(circle at 80% 74%, rgba(168, 85, 247, 0.18), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 33%, rgba(89, 40, 20, 0.28) 72%, rgba(22, 10, 8, 0.68) 100%),
+    linear-gradient(180deg, rgba(72, 33, 14, 0.4) 0%, rgba(72, 33, 14, 0.02) 30%, rgba(72, 33, 14, 0.45) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-christmas {
+  --slideshow-bg:
+    radial-gradient(circle at 14% 12%, rgba(21, 128, 61, 0.26), transparent 24%),
+    radial-gradient(circle at 88% 10%, rgba(212, 175, 55, 0.2), transparent 24%),
+    linear-gradient(180deg, #0f1f14 0%, #11271a 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(10, 67, 34, 0.8), rgba(10, 45, 28, 0.62));
+  --slideshow-pill-color: #d7fbe5;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 14% 16%, rgba(21, 128, 61, 0.2), transparent 30%),
+    radial-gradient(circle at 84% 14%, rgba(212, 175, 55, 0.16), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 34%, rgba(10, 71, 35, 0.24) 72%, rgba(7, 37, 22, 0.62) 100%),
+    linear-gradient(180deg, rgba(8, 55, 29, 0.34) 0%, rgba(8, 55, 29, 0.03) 32%, rgba(8, 55, 29, 0.4) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-tropical {
+  --slideshow-bg:
+    radial-gradient(circle at 16% 12%, rgba(20, 184, 166, 0.28), transparent 24%),
+    radial-gradient(circle at 88% 72%, rgba(14, 165, 233, 0.24), transparent 24%),
+    linear-gradient(180deg, #052027 0%, #09313d 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(5, 68, 70, 0.82), rgba(8, 45, 58, 0.62));
+  --slideshow-pill-color: #b9f9f2;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 20% 16%, rgba(20, 184, 166, 0.2), transparent 32%),
+    radial-gradient(circle at 84% 74%, rgba(14, 165, 233, 0.18), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 34%, rgba(6, 72, 73, 0.24) 72%, rgba(4, 35, 44, 0.63) 100%),
+    linear-gradient(180deg, rgba(6, 57, 66, 0.35) 0%, rgba(6, 57, 66, 0.02) 30%, rgba(6, 57, 66, 0.4) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-corporate {
+  --slideshow-bg:
+    radial-gradient(circle at 16% 10%, rgba(37, 99, 235, 0.22), transparent 24%),
+    linear-gradient(180deg, #0e1b2d 0%, #162742 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(10, 24, 44, 0.84), rgba(18, 36, 66, 0.62));
+  --slideshow-pill-color: #c9ddff;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 16% 14%, rgba(37, 99, 235, 0.18), transparent 30%),
+    radial-gradient(circle at 82% 74%, rgba(148, 163, 184, 0.14), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 34%, rgba(20, 47, 86, 0.24) 72%, rgba(9, 20, 41, 0.62) 100%),
+    linear-gradient(180deg, rgba(15, 36, 67, 0.35) 0%, rgba(15, 36, 67, 0.02) 30%, rgba(15, 36, 67, 0.4) 100%);
+}
+
+.slideshow-fullscreen-body.event-theme-neonparty {
+  --slideshow-bg:
+    radial-gradient(circle at 14% 8%, rgba(244, 63, 94, 0.28), transparent 24%),
+    radial-gradient(circle at 88% 84%, rgba(34, 211, 238, 0.24), transparent 24%),
+    linear-gradient(180deg, #120a1d 0%, #1d1230 100%);
+  --slideshow-panel-bg: linear-gradient(145deg, rgba(58, 18, 78, 0.82), rgba(22, 18, 67, 0.62));
+  --slideshow-pill-color: #ffd7ef;
+  --slideshow-atmosphere:
+    radial-gradient(circle at 16% 14%, rgba(244, 63, 94, 0.22), transparent 30%),
+    radial-gradient(circle at 82% 78%, rgba(34, 211, 238, 0.2), transparent 30%);
+  --slideshow-vignette:
+    radial-gradient(circle at 50% 56%, rgba(0, 0, 0, 0) 33%, rgba(64, 17, 88, 0.27) 72%, rgba(20, 12, 49, 0.66) 100%),
+    linear-gradient(180deg, rgba(58, 14, 83, 0.36) 0%, rgba(58, 14, 83, 0.03) 30%, rgba(58, 14, 83, 0.42) 100%);
 }
 
 @media (max-width: 640px) {

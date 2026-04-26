@@ -73,6 +73,7 @@ function normalizeRow(row) {
     description: row.description || '',
     startsAt: row.startsAt || row.starts_at,
     status: row.status,
+    theme: row.theme || 'classic',
     uploadSourceMode: row.uploadSourceMode || row.upload_source_mode || 'default',
     uploadAllowMultiple: row.uploadAllowMultiple !== undefined
       ? Boolean(row.uploadAllowMultiple)
@@ -118,7 +119,7 @@ async function listByOwner(ownerUserId) {
 
   const [rows] = await pool.query(`
     SELECT id, uuid, owner_user_id AS ownerUserId, name, description,
-        starts_at AS startsAt, status,
+      starts_at AS startsAt, status, theme,
         upload_source_mode AS uploadSourceMode,
         upload_allow_multiple AS uploadAllowMultiple,
         token,
@@ -150,7 +151,7 @@ async function listAll() {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-        e.name, e.description, e.starts_at AS startsAt, e.status,
+      e.name, e.description, e.starts_at AS startsAt, e.status, e.theme,
         e.upload_source_mode AS uploadSourceMode,
         e.upload_allow_multiple AS uploadAllowMultiple,
         e.token,
@@ -181,7 +182,7 @@ async function findById(eventId) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-        e.name, e.description, e.starts_at AS startsAt, e.status,
+      e.name, e.description, e.starts_at AS startsAt, e.status, e.theme,
         e.upload_source_mode AS uploadSourceMode,
         e.upload_allow_multiple AS uploadAllowMultiple,
         e.token,
@@ -213,7 +214,7 @@ async function findByToken(token) {
   const [rows] = await pool.query(`
     SELECT e.id, e.uuid, e.owner_user_id AS ownerUserId,
            u.email AS ownerEmail, u.full_name AS ownerFullName,
-        e.name, e.description, e.starts_at AS startsAt, e.status,
+      e.name, e.description, e.starts_at AS startsAt, e.status, e.theme,
         e.upload_source_mode AS uploadSourceMode,
         e.upload_allow_multiple AS uploadAllowMultiple,
         e.token,
@@ -233,6 +234,7 @@ async function createEvent({
   description = '',
   startsAt,
   status = 'inactive',
+  theme = 'classic',
   uploadSourceMode = 'default',
   uploadAllowMultiple = true,
   token,
@@ -259,6 +261,7 @@ async function createEvent({
       description,
       startsAt,
       status,
+      theme,
       uploadSourceMode,
       uploadAllowMultiple: Boolean(uploadAllowMultiple),
       token: eventToken,
@@ -275,10 +278,10 @@ async function createEvent({
     const [result] = await pool.query(`
       INSERT INTO events (
         uuid, owner_user_id, name, description, starts_at, status,
-        upload_source_mode, upload_allow_multiple, token
+        theme, upload_source_mode, upload_allow_multiple, token
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [eventUuid, ownerUserId, name, description, startsAt, status, uploadSourceMode, uploadAllowMultiple ? 1 : 0, eventToken]);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [eventUuid, ownerUserId, name, description, startsAt, status, theme, uploadSourceMode, uploadAllowMultiple ? 1 : 0, eventToken]);
 
     return findById(result.insertId);
   } catch (err) {
@@ -306,6 +309,7 @@ async function updateEvent(eventId, payload) {
     description: payload.description !== undefined ? payload.description : current.description,
     startsAt: payload.startsAt || current.startsAt,
     status: payload.status || current.status,
+    theme: payload.theme || current.theme,
     uploadSourceMode: payload.uploadSourceMode || current.uploadSourceMode,
     uploadAllowMultiple: payload.uploadAllowMultiple !== undefined
       ? Boolean(payload.uploadAllowMultiple)
@@ -341,7 +345,7 @@ async function updateEvent(eventId, payload) {
     await pool.query(`
       UPDATE events
       SET owner_user_id = ?, name = ?, description = ?, starts_at = ?, status = ?,
-          upload_source_mode = ?, upload_allow_multiple = ?, token = ?, updated_at = CURRENT_TIMESTAMP
+          theme = ?, upload_source_mode = ?, upload_allow_multiple = ?, token = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
       nextData.ownerUserId,
@@ -349,6 +353,7 @@ async function updateEvent(eventId, payload) {
       nextData.description,
       nextData.startsAt,
       nextData.status,
+      nextData.theme,
       nextData.uploadSourceMode,
       nextData.uploadAllowMultiple ? 1 : 0,
       nextData.token,

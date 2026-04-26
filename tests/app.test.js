@@ -126,6 +126,26 @@ describe('Tests applicatifs HTTP', () => {
       expect(res.text).to.include('id="welcomeScreen" class="welcome-screen" aria-live="polite" hidden');
     });
 
+    it('GET /event/:token applique la classe CSS du theme configure', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const createdEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Nuit Cinema',
+        description: 'Projection publique en plein air.',
+        startsAt: '2099-09-20T20:00',
+        status: 'active',
+        theme: 'cinema',
+      });
+
+      const agent = request.agent(app);
+      await registerGuestForEvent(agent, createdEvent.token, 'Lea Cinema');
+
+      const eventPage = await agent.get(`/event/${createdEvent.token}`);
+
+      expect(eventPage.status).to.equal(200);
+      expect(eventPage.text).to.include('class="page-event event-theme-cinema"');
+    });
+
     it('GET /event/:token/register redirige vers /event/:token si le cookie visiteur existe deja', async () => {
       const owner = await userStore.findByEmail('admin@example.com');
       const createdEvent = await eventStore.createEvent({
@@ -470,6 +490,37 @@ describe('Tests applicatifs HTTP', () => {
       const ownerSlideshow = await agent.get(`/profile/events/${events[0].id}/slideshow`);
       expect(ownerSlideshow.status).to.equal(200);
       expect(ownerSlideshow.text).to.include('slideshow-shell');
+      expect(ownerSlideshow.text).to.include('event-theme-classic');
+    });
+
+    it('applique le theme configure sur la page slideshow proprietaire', async () => {
+      const owner = await userStore.findByEmail('admin@example.com');
+      const themedEvent = await eventStore.createEvent({
+        ownerUserId: owner.id,
+        name: 'Session Halloween',
+        description: 'Projection pour la soiree Halloween.',
+        startsAt: '2099-10-31T20:00:00',
+        status: 'active',
+        theme: 'halloween',
+      });
+
+      const agent = request.agent(app);
+      const loginPage = await agent.get('/login');
+      const csrfToken = extractCsrfToken(loginPage.text);
+
+      await agent
+        .post('/login')
+        .type('form')
+        .send({
+          _csrf: csrfToken,
+          email: 'admin@example.com',
+          password: 'Admin1234',
+        })
+        .expect(302);
+
+      const slideshow = await agent.get(`/profile/events/${themedEvent.id}/slideshow`);
+      expect(slideshow.status).to.equal(200);
+      expect(slideshow.text).to.include('event-theme-halloween');
     });
 
     it('sanitise la description markdown lors de la creation d\'evenement', async () => {

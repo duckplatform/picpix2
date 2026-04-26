@@ -2,7 +2,10 @@
   <div class="container header-inner <%= (typeof eventSiteNav !== 'undefined' && eventSiteNav) ? 'header-inner-event' : '' %>">
     <% if (typeof eventSiteNav !== 'undefined' && eventSiteNav) { %>
       <div class="event-site-stack">
-        <a class="brand event-brand" href="<%= eventSiteNav.eventUrl %>"><%= eventSiteNav.eventName %></a>
+        <a class="brand event-brand" href="<%= eventSiteNav.eventUrl %>">
+          <span class="event-theme-icon" aria-hidden="true"><%= eventSiteNav.eventTheme ? eventSiteNav.eventTheme.icon : '✦' %></span>
+          <span class="event-theme-title"><%= eventSiteNav.eventName %></span>
+        </a>
         <nav class="nav-links nav-links-event" aria-label="Navigation evenement">
           <span class="event-links-left">
             <a href="<%= eventSiteNav.eventUrl %>">Evenement</a>

@@ -12,6 +12,7 @@ const { marked } = require('marked');
 const { body, param, validationResult } = require('express-validator');
 
 const logger = require('../config/logger');
+const eventThemes = require('../config/eventThemes');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const eventFileStore = require('../services/eventFileStore');
 const imageVariantService = require('../services/imageVariantService');
@@ -21,6 +22,7 @@ const eventStore = require('../services/eventStore');
 const router = express.Router();
 const MAX_EVENT_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
 const EVENT_UPLOAD_SOURCE_MODES = ['default', 'camera_only', 'library_only'];
+const EVENT_THEME_KEYS = Object.keys(eventThemes.EVENT_THEMES);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -77,6 +79,7 @@ function renderView(res, view, payload = {}, status = 200) {
     fieldErrors: {},
     headCssPaths: [],
     footerScriptPaths: [],
+    eventThemeOptions: eventThemes.listThemes(),
     ...payload,
   });
 }
@@ -126,15 +129,20 @@ function getEventGuestName(req, token) {
   return value ? value.trim() : '';
 }
 
-function buildEventSiteNav(token, guestName, eventName) {
+function buildEventSiteNav(token, guestName, eventName, themeKey) {
   return {
     token,
     guestName: (guestName || 'Visiteur').trim().slice(0, 120),
     eventName: (eventName || 'Evenement').trim().slice(0, 120),
+    eventTheme: eventThemes.getTheme(themeKey),
     eventUrl: `/event/${token}`,
     galleryUrl: `/event/${token}/gallery`,
     uploadUrl: `/event/${token}/upload`,
   };
+}
+
+function buildEventPageClass(themeKey) {
+  return `page-event event-theme-${eventThemes.normalizeThemeKey(themeKey)}`;
 }
 
 function parseUploadAllowMultiple(value) {
@@ -152,6 +160,7 @@ function normalizeEventFormData(formData = {}, fallback = {}) {
 
   return {
     ...formData,
+    theme: eventThemes.normalizeThemeKey(formData.theme || fallback.theme),
     uploadSourceMode,
     uploadAllowMultiple,
   };
@@ -314,6 +323,10 @@ const eventValidators = [
   body('status')
     .trim()
     .isIn(['active', 'inactive']).withMessage('Statut evenement invalide.'),
+  body('theme')
+    .optional({ values: 'falsy' })
+    .trim()
+    .isIn(EVENT_THEME_KEYS).withMessage('Theme evenement invalide.'),
   body('uploadSourceMode')
     .optional({ values: 'falsy' })
     .trim()
@@ -367,6 +380,7 @@ async function renderProfile(req, res, payload = {}, status = 200) {
     formData: {
       fullName: req.currentUser.fullName,
       eventStatus: 'inactive',
+      theme: eventThemes.DEFAULT_EVENT_THEME,
       uploadSourceMode: 'default',
       uploadAllowMultiple: true,
       ...payload.formData,
@@ -392,6 +406,7 @@ function renderProfileEventForm(req, res, eventItem, payload = {}, status = 200)
       description: eventItem.description,
       startsAt: toDateTimeLocal(eventItem.startsAt),
       status: eventItem.status,
+      theme: eventItem.theme || eventThemes.DEFAULT_EVENT_THEME,
       uploadSourceMode: eventItem.uploadSourceMode,
       uploadAllowMultiple: eventItem.uploadAllowMultiple,
       ...payload.formData,
@@ -436,10 +451,10 @@ router.get('/event/:token', param('token').trim().matches(/^[A-Za-z0-9]{10}$/), 
 
     return renderView(res, 'event', {
       title: eventItem.name,
-      pageClass: 'page-event',
+      pageClass: buildEventPageClass(eventItem.theme),
       eventItem,
       guestName,
-      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name, eventItem.theme),
       renderedDescriptionHtml: renderEventDescriptionMarkdown(eventItem.description),
       nowIso: new Date().toISOString(),
       eventStartsAtIso: hasValidStartDate ? startsAtDate.toISOString() : null,
@@ -472,10 +487,10 @@ router.get('/event/:token/upload', param('token').trim().matches(/^[A-Za-z0-9]{1
 
     return renderView(res, 'event-upload', {
       title: `${eventItem.name} - Upload photos`,
-      pageClass: 'page-event',
+      pageClass: buildEventPageClass(eventItem.theme),
       eventItem,
       guestName,
-      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name, eventItem.theme),
       uploadOptions: {
         sourceMode: eventItem.uploadSourceMode,
         allowMultiple: eventItem.uploadAllowMultiple,
@@ -528,10 +543,10 @@ router.get('/event/:token/gallery', param('token').trim().matches(/^[A-Za-z0-9]{
 
     return renderView(res, 'event-gallery', {
       title: `${eventItem.name} - Galerie`,
-      pageClass: 'page-event',
+      pageClass: buildEventPageClass(eventItem.theme),
       eventItem,
       guestName,
-      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name),
+      eventSiteNav: buildEventSiteNav(req.params.token, guestName, eventItem.name, eventItem.theme),
       galleryFiles,
     });
   } catch (err) {
@@ -722,9 +737,9 @@ router.get('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9]
 
     return renderView(res, 'event-register', {
       title: `${eventItem.name} - Inscription`,
-      pageClass: 'page-event',
+      pageClass: buildEventPageClass(eventItem.theme),
       eventItem,
-      eventSiteNav: buildEventSiteNav(req.params.token, null, eventItem.name),
+      eventSiteNav: buildEventSiteNav(req.params.token, null, eventItem.name, eventItem.theme),
       formData: { guestName: '' },
     });
   } catch (err) {
@@ -743,9 +758,9 @@ router.post('/event/:token/register', param('token').trim().matches(/^[A-Za-z0-9
     if (!result.isEmpty()) {
       return renderView(res, 'event-register', {
         title: `${eventItem.name} - Inscription`,
-        pageClass: 'page-event',
+        pageClass: buildEventPageClass(eventItem.theme),
         eventItem,
-        eventSiteNav: buildEventSiteNav(req.params.token, req.body.guestName || '', eventItem.name),
+        eventSiteNav: buildEventSiteNav(req.params.token, req.body.guestName || '', eventItem.name, eventItem.theme),
         formData: { guestName: req.body.guestName || '' },
         fieldErrors: collectFieldErrors(result),
       }, 422);
@@ -925,6 +940,7 @@ router.post('/profile/events', requireAuth, eventValidators, async (req, res, ne
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      theme: eventThemes.normalizeThemeKey(req.body.theme),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1023,6 +1039,7 @@ router.get('/profile/events/:id/slideshow', requireAuth, param('id').isInt({ min
       title: `Slideshow - ${editingEvent.name}`,
       pageClass: 'page-profile',
       editingEvent,
+      eventTheme: eventThemes.getTheme(editingEvent.theme),
       initialPhotos,
       footerScriptPaths: ['/socket.io/socket.io.js', '/profile-event-slideshow.js'],
     });
@@ -1105,6 +1122,7 @@ router.put('/profile/events/:id', requireAuth, param('id').isInt({ min: 1 }), ev
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      theme: eventThemes.normalizeThemeKey(req.body.theme),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1217,6 +1235,7 @@ router.get('/admin/events/new', requireAdmin, async (req, res, next) => {
       editingEvent: null,
       formData: {
         status: 'inactive',
+        theme: eventThemes.DEFAULT_EVENT_THEME,
         uploadSourceMode: 'default',
         uploadAllowMultiple: true,
       },
@@ -1253,6 +1272,7 @@ router.post('/admin/events', requireAdmin, adminEventValidators, async (req, res
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      theme: eventThemes.normalizeThemeKey(req.body.theme),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });
@@ -1332,6 +1352,7 @@ router.put('/admin/events/:id', requireAdmin, param('id').isInt({ min: 1 }), adm
       description: normalizeEventDescriptionMarkdown(req.body.description),
       startsAt: req.body.startsAt,
       status: req.body.status,
+      theme: eventThemes.normalizeThemeKey(req.body.theme),
       uploadSourceMode: req.body.uploadSourceMode,
       uploadAllowMultiple: parseUploadAllowMultiple(req.body.uploadAllowMultiple),
     });

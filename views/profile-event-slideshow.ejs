@@ -6,7 +6,7 @@
     <title><%= editingEvent.name %> - Slideshow</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body class="slideshow-fullscreen-body">
+  <body class="slideshow-fullscreen-body event-theme-<%= eventTheme ? eventTheme.key : 'classic' %>">
 
     <div class="slideshow-shell"
       id="slideshow-shell"
@@ -15,7 +15,7 @@
       data-initial-photos='<%- JSON.stringify(initialPhotos || []) %>'>
 
       <header class="slideshow-event-banner" aria-label="Nom de l'evenement">
-        <span class="slideshow-event-pill">Evenement</span>
+        <span class="slideshow-event-pill"><%= eventTheme ? eventTheme.icon : '✦' %> Evenement</span>
         <h1 class="slideshow-event-name"><%= editingEvent.name %></h1>
       </header>
 
