@@ -43,8 +43,36 @@
   // ── État interne ────────────────────────────────────────────────────────────
   let stream = null;
   let capturedBlobs = [];
+  let streamStopTimer = null;
   // 'environment' = caméra arrière (défaut mobile), 'user' = caméra avant
   let facingMode = 'environment';
+
+  function cancelScheduledStop() {
+    if (streamStopTimer) {
+      clearTimeout(streamStopTimer);
+      streamStopTimer = null;
+    }
+  }
+
+  function scheduleStopStream(delayMs) {
+    cancelScheduledStop();
+    streamStopTimer = setTimeout(function stopLater() {
+      stopStream();
+    }, delayMs);
+  }
+
+  async function getCameraPermissionState() {
+    if (!navigator.permissions || !navigator.permissions.query) {
+      return 'unknown';
+    }
+
+    try {
+      const status = await navigator.permissions.query({ name: 'camera' });
+      return status && status.state ? status.state : 'unknown';
+    } catch (err) {
+      return 'unknown';
+    }
+  }
 
   // ── Gestion du flux caméra ──────────────────────────────────────────────────
 
@@ -52,10 +80,17 @@
    * Démarre le flux vidéo avec le facingMode courant.
    * Si le flux précédent existe, on l'arrête d'abord.
    */
-  async function startStream() {
+  async function startStream(options) {
+    const forceRestart = Boolean(options && options.forceRestart);
+
+    if (stream && !forceRestart) {
+      videoEl.srcObject = stream;
+      await videoEl.play();
+      return;
+    }
+
     if (stream) {
-      stream.getTracks().forEach(function stopTrack(t) { t.stop(); });
-      stream = null;
+      stopStream();
     }
 
     const constraints = {
@@ -70,8 +105,13 @@
     try {
       stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoEl.srcObject = stream;
-      videoEl.play();
+      await videoEl.play();
     } catch (err) {
+      if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+        showCameraError('Accès caméra refusé. Autorisez la caméra dans les réglages du navigateur puis réessayez.');
+        return;
+      }
+
       showCameraError('Impossible d\'accéder à la caméra : ' + err.message);
     }
   }
@@ -200,23 +240,36 @@
 
   // ── Ouverture / fermeture modal ──────────────────────────────────────────────
 
-  function openModal() {
+  async function openModal() {
     capturedBlobs = [];
     thumbnailsEl.innerHTML = '';
     clearCameraError();
     updateCounter();
     updateValidateBtn();
+    captureBtn.disabled = false;
     modal.removeAttribute('hidden');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    startStream();
+
+    cancelScheduledStop();
+
+    const permissionState = await getCameraPermissionState();
+    if (permissionState === 'denied') {
+      showCameraError('La caméra est bloquée pour ce site. Ouvrez les permissions du navigateur et autorisez la caméra.');
+      return;
+    }
+
+    await startStream({ forceRestart: false });
   }
 
   function closeModal() {
-    stopStream();
     modal.setAttribute('hidden', '');
     modal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+
+    // On garde temporairement le flux pour éviter de redemander la permission
+    // si l'utilisateur rouvre la caméra juste après.
+    scheduleStopStream(90 * 1000);
   }
 
   // ── Validation → injection dans Dropzone ────────────────────────────────────
@@ -250,12 +303,14 @@
 
   function switchCamera() {
     facingMode = facingMode === 'environment' ? 'user' : 'environment';
-    startStream();
+    void startStream({ forceRestart: true });
   }
 
   // ── Écouteurs d'événements ───────────────────────────────────────────────────
 
-  openBtn.addEventListener('click', openModal);
+  openBtn.addEventListener('click', function onOpenClick() {
+    void openModal();
+  });
   cancelBtn.addEventListener('click', closeModal);
   captureBtn.addEventListener('click', capturePhoto);
   validateBtn.addEventListener('click', validatePhotos);
@@ -273,6 +328,21 @@
     if (e.key === 'Escape' && !modal.hasAttribute('hidden')) {
       closeModal();
     }
+  });
+
+  document.addEventListener('visibilitychange', function onVisibilityChange() {
+    if (document.hidden) {
+      stopStream();
+      return;
+    }
+
+    if (!modal.hasAttribute('hidden')) {
+      void startStream({ forceRestart: false });
+    }
+  });
+
+  window.addEventListener('pagehide', function onPageHide() {
+    stopStream();
   });
 
   // En mode mono-photo : désactive le bouton Capturer après 1 prise
